@@ -1,0 +1,70 @@
+import {
+  SYNC_BYTE,
+  PACKET_LENGTH
+} from './packet'
+
+export default class PacketChunker {  
+  private inputReader: ReadableStreamDefaultReader<Uint8Array>;
+  private restBytes: Uint8Array;
+  private outputStream: ReadableStream<Uint8Array>;
+  private outputController: ReadableStreamController<Uint8Array>; 
+
+  public constructor (reader: ReadableStream<Uint8Array>) {
+    this.inputReader = reader.getReader();
+    this.restBytes = Uint8Array.from([]);
+    this.outputStream = new ReadableStream<Uint8Array>({
+      start (controller) {
+        this.outputController = controller;
+      }
+    })
+    this.pump();
+  }
+
+  static isSupported () {
+    return !!(self.ReadableStream);
+  }
+
+  public abort() {
+    try {
+      this.inputReader?.cancel();
+    } catch (e: unknown) {}
+    try {
+      this.outputStream?.cancel();
+      this.outputStream = new ReadableStream<Uint8Array>({
+        start (controller) {
+          this.outputController = controller;
+        }
+      });
+    } catch (e: unknown) {}
+  }
+
+  private pump(): void {
+    this.inputReader.read().then(({ value, done }) => {
+      if (done) {
+        return;
+      } else if (!this.outputController) {
+        return;
+      }
+
+      const chunk = Uint8Array.from([... this.restBytes, ... value]);
+      let lastPosition: number | null = null;
+      for (let i = 0; i < chunk.length; i++) {
+        if (chunk[i] === SYNC_BYTE) {
+          if (i + PACKET_LENGTH >= chunk.length) {
+            lastPosition = i;
+            break;
+          } else {
+            lastPosition = i + PACKET_LENGTH;
+            this.outputController.enqueue(chunk.slice(i, i + PACKET_LENGTH));
+          }
+        }
+      }
+
+      if (lastPosition != null) {
+        this.restBytes = chunk.slice(lastPosition);
+      }
+
+      this.pump();
+    })
+  }
+};
