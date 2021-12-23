@@ -1,13 +1,15 @@
 export default class PassThrough {  
   private inputReader: ReadableStreamDefaultReader<Uint8Array>;
   private outputStream: ReadableStream<Uint8Array>;
-  private outputController: ReadableStreamController<Uint8Array>; 
+  private outputController: ReadableStreamController<Uint8Array> | null = null; 
 
   public constructor (readbableStream: ReadableStream<Uint8Array>) {
     this.inputReader = readbableStream.getReader();
+
+    const object = this;
     this.outputStream = new ReadableStream<Uint8Array>({
       start (controller) {
-        this.outputController = controller;
+        object.outputController = controller;
       }
     })
     this.pump();
@@ -24,9 +26,11 @@ export default class PassThrough {
   public abort() {
     try {
       this.outputStream?.cancel();
+
+      const object = this;
       this.outputStream = new ReadableStream<Uint8Array>({
         start (controller) {
-          this.outputController = controller;
+          object.outputController = controller;
         }
       });
     } catch (e: unknown) {}

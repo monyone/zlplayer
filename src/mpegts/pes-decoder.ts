@@ -8,6 +8,7 @@ import {
   adaptation_field_length,
   PACKET_LENGTH,
 } from './packet'
+import { PES_packet_length } from './pes';
 
 export default class PESDecoder {
   private readonly pid: number;
@@ -34,13 +35,13 @@ export default class PESDecoder {
       }
 
       const offset = HEADER_LENGTH + (has_adaptation_field(packet) ? 1 : 0) + adaptation_field_length(packet);
-      const pes_length = this.chunks?.length() ?? ((packet[offset + 4] << 8) | packet[offset + 5]);
+      const length: number = this.chunks?.length() ?? PES_packet_length(packet);
 
       if (this.chunks == null) {
-        this.chunks = new Chunks(pes_length);
+        this.chunks = new Chunks(length);
       }
 
-      this.chunks.push(packet.slice(offset, Math.min(pes_length === 0 ? PACKET_LENGTH : offset + pes_length, PACKET_LENGTH)));
+      this.chunks.push(packet.slice(offset, Math.min(length === 0 ? PACKET_LENGTH : offset + length, PACKET_LENGTH)));
       
       if (this.chunks.length() !== 0) {
         if (this.chunks.isFull()) {        

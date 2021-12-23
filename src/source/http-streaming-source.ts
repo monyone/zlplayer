@@ -3,12 +3,13 @@ export default class HTTPStreamingSource {
   private abortController: AbortController | null = null;
 
   private outputStream: ReadableStream<Uint8Array>;
-  private outputController: ReadableStreamController<Uint8Array>; 
+  private outputController: ReadableStreamController<Uint8Array> | null = null; 
 
   public constructor () {
-    this.outputStream = new ReadableStream<Uint8Array>({
+    const global = this;
+    this.outputStream = new ReadableStream<Uint8Array>({      
       start (controller) {
-        this.outputController = controller;
+        global.outputController = controller;
       }
     })
   }
@@ -20,9 +21,10 @@ export default class HTTPStreamingSource {
   public abort() {
     try {
       this.outputStream?.cancel();
+      const global = this;
       this.outputStream = new ReadableStream<Uint8Array>({
         start (controller) {
-          this.outputController = controller;
+          global.outputController = controller;
         }
       });
     } catch (e: unknown) {}
@@ -47,7 +49,11 @@ export default class HTTPStreamingSource {
       });
 
       if (!(result.ok && 200 <= result.status && result.status < 300)) {
-        return null;
+        return false;
+      }
+
+      if (!(result.body)) {
+        return false;
       }
 
       this.fetchReader = result.body.getReader();
@@ -63,6 +69,7 @@ export default class HTTPStreamingSource {
   }
 
   private pump(): void {
+    if (this.fetchReader == null) { return; }
     this.fetchReader.read().then(({ value, done }) => {
       if (done) {
         return;

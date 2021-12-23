@@ -49,12 +49,12 @@ export default class SectionDecoder {
       for (let begin = offset + 1 + pointer_field; offset < PACKET_LENGTH; ) {
         if (packet[begin + 0] === STUFFING_BYTE) { break; }
 
-        const seciton_length = this.chunks?.length() ?? section_length(packet);
+        const length: number = this.chunks?.length() ?? section_length(packet);
         if (this.chunks == null) {
-          this.chunks = new Chunks(seciton_length);
+          this.chunks = new Chunks(length);
         }
 
-        this.chunks.push(packet.slice(begin, Math.min(begin + seciton_length, PACKET_LENGTH)));
+        this.chunks.push(packet.slice(begin, Math.min(begin + length, PACKET_LENGTH)));
         if (this.chunks.isFull()) {        
           result.push(this.chunks.concat());
           this.chunks = null;

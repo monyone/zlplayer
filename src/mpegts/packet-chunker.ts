@@ -7,14 +7,16 @@ export default class PacketChunker {
   private inputReader: ReadableStreamDefaultReader<Uint8Array>;
   private restBytes: Uint8Array;
   private outputStream: ReadableStream<Uint8Array>;
-  private outputController: ReadableStreamController<Uint8Array>; 
+  private outputController: ReadableStreamController<Uint8Array> | null = null;
 
   public constructor (reader: ReadableStream<Uint8Array>) {
     this.inputReader = reader.getReader();
     this.restBytes = Uint8Array.from([]);
+
+    const global = this;
     this.outputStream = new ReadableStream<Uint8Array>({
       start (controller) {
-        this.outputController = controller;
+        global.outputController = controller;
       }
     })
     this.pump();
@@ -30,9 +32,11 @@ export default class PacketChunker {
     } catch (e: unknown) {}
     try {
       this.outputStream?.cancel();
+
+      const global = this;
       this.outputStream = new ReadableStream<Uint8Array>({
         start (controller) {
-          this.outputController = controller;
+          global.outputController = controller;
         }
       });
     } catch (e: unknown) {}
@@ -46,7 +50,7 @@ export default class PacketChunker {
         return;
       }
 
-      const chunk = Uint8Array.from([... this.restBytes, ... value]);
+      const chunk = Uint8Array.from([... this.restBytes, ... (value ?? [])]);
       let lastPosition: number | null = null;
       for (let i = 0; i < chunk.length; i++) {
         if (chunk[i] === SYNC_BYTE) {

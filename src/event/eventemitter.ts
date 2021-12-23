@@ -13,14 +13,14 @@ export default class EventEmitter {
 
   public off<T extends keyof Events>(type: T, handler: ((payload: Events[T]) => void)): void {
     if (!this.listeners.has(type)) { return; }
-    const index = this.listeners.get(type).indexOf(handler as ((payload: unknown) => void));
+    const index = this.listeners.get(type)!.indexOf(handler as ((payload: unknown) => void));
     if (index >= 0) {
       this.listeners.get(type)!.splice(index, 1);
     }
   }
 
   public emit<T extends keyof Events>(type: T, payload: Events[T]) {
-    this.listeners.get(type).forEach((func) => {
+    (this.listeners.get(type) ?? []).forEach((func) => {
       func.call(this, payload);
     })
   }

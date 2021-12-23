@@ -83,7 +83,7 @@ export default class Demuxer {
         return;
       }
 
-      const packet = value;
+      const packet = value!;
       const packet_pid = pid(packet);
 
       if (packet_pid === this.PCR_PID) {

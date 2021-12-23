@@ -44,37 +44,33 @@ export const optional_pes_header_length = (pes: Uint8Array): number => {
 
 export const pts = (pes: Uint8Array): number | null => {
   if (!has_pts(pes)) {
-    return null;
+    return Number.NaN;
   }
 
-  let pts = 0;
-  pts += (pes[PES_HEADER_SIZE + 3] & 0x0E) * 536870912; // 1 << 29
-  pts += (pes[PES_HEADER_SIZE + 4] & 0xFF) * 4194304; // 1 << 22
-  pts += (pes[PES_HEADER_SIZE + 5] & 0xFE) * 16384; // 1 << 14
-  pts += (pes[PES_HEADER_SIZE + 6] & 0xFF) * 128; // 1 << 7
-  pts += (pes[PES_HEADER_SIZE + 7] & 0xFE) / 2;
+  let value = 0;
+  value *= (1 << 3); value += ((pes[PES_HEADER_SIZE + 3 + 0] & 0x0E) >> 1);
+  value *= (1 << 8); value += ((pes[PES_HEADER_SIZE + 3 + 1] & 0xFF) >> 0);
+  value *= (1 << 7); value += ((pes[PES_HEADER_SIZE + 3 + 2] & 0xFE) >> 1);
+  value *= (1 << 8); value += ((pes[PES_HEADER_SIZE + 3 + 3] & 0xFF) >> 0);
+  value *= (1 << 7); value += ((pes[PES_HEADER_SIZE + 3 + 4] & 0xFE) >> 1);
 
-  return pts;
+  return value;
 }
 
-export const dts = (pes: Uint8Array): number | null => {
+export const dts = (pes: Uint8Array): number => {
   if (!has_dts(pes)) {
-    return null;
+    return Number.NaN;
   }
 
-  let offset = PES_HEADER_SIZE + 3;
-  if (has_pts) {
-    offset += 5;
-  }
+  const offset = has_pts(pes) ? 5 : 0;
+  let value = 0;
+  value *= (1 << 3); value += ((pes[PES_HEADER_SIZE + 3 + offset + 0] & 0x0E) >> 1);
+  value *= (1 << 8); value += ((pes[PES_HEADER_SIZE + 3 + offset + 1] & 0xFF) >> 0);
+  value *= (1 << 7); value += ((pes[PES_HEADER_SIZE + 3 + offset + 2] & 0xFE) >> 1);
+  value *= (1 << 8); value += ((pes[PES_HEADER_SIZE + 3 + offset + 3] & 0xFF) >> 0);
+  value *= (1 << 7); value += ((pes[PES_HEADER_SIZE + 3 + offset + 4] & 0xFE) >> 1);
 
-  let dts = 0;
-  dts += (pes[offset + 0] & 0x0E) * 536870912; // 1 << 29
-  dts += (pes[offset + 1] & 0xFF) * 4194304; // 1 << 22
-  dts += (pes[offset + 2] & 0xFE) * 16384; // 1 << 14
-  dts += (pes[offset + 3] & 0xFF) * 128; // 1 << 7
-  dts += (pes[offset + 4] & 0xFE) / 2;
-
-  return dts;
+  return value;
 }
 
 export const PES_packet_data = (pes: Uint8Array) => {

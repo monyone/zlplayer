@@ -39,5 +39,14 @@ export const has_pcr = (packet: Uint8Array): boolean => {
   return (packet[5] & 0x10) !== 0;
 }
 export const pcr = (packet: Uint8Array): number => {
-  if (!has_pcr(packet)) { return null; }
+  if (!has_pcr(packet)) { return Number.NaN; }
+
+  let pcr_base = 0;
+  pcr_base = (pcr_base * (1 << 8)) + ((packet[HEADER_LENGTH + 1 + 1] & 0xFF) >> 0);
+  pcr_base = (pcr_base * (1 << 8)) + ((packet[HEADER_LENGTH + 1 + 2] & 0xFF) >> 0);
+  pcr_base = (pcr_base * (1 << 8)) + ((packet[HEADER_LENGTH + 1 + 3] & 0xFF) >> 0);
+  pcr_base = (pcr_base * (1 << 8)) + ((packet[HEADER_LENGTH + 1 + 4] & 0xFF) >> 0);
+  pcr_base = (pcr_base * (1 << 1)) + ((packet[HEADER_LENGTH + 1 + 5] & 0x80) >> 7);
+
+  return pcr_base;
 }

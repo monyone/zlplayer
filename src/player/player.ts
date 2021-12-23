@@ -6,17 +6,18 @@ import { Events, EventTypes } from '../event/events';
 import PacketChunker from '../mpegts/packet-chunker';
 
 export default class Player {  
-  private source: HTTPStreamingSource; 
-  private buffering: PassThrough | null;
-  private chunker: PacketChunker | null;
-  private demuxer: Demuxer | null;
   private emitter: EventEmitter;
 
-  private media: HTMLMediaElement | null;
-  private videoTrackGeneratorWriter: WritableStreamDefaultWriter;
-  private audioTrackGeneratorWriter: WritableStreamDefaultWriter;
-  private videoDecoder: VideoDecoder;
-  private audioDecoder: AudioDecoder;
+  private source: HTTPStreamingSource; 
+  private buffering: PassThrough | null = null;
+  private chunker: PacketChunker | null = null;
+  private demuxer: Demuxer | null = null;
+
+  private media: HTMLMediaElement | null = null;;
+  private videoTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
+  private audioTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
+  private videoDecoder: VideoDecoder | null = null;
+  private audioDecoder: AudioDecoder | null = null;
 
   private readonly onH264ArrivedHandler = this.onH264Arrived.bind(this);
   private readonly onAACArrivedHandler = this.onAACArrived.bind(this);
@@ -34,7 +35,7 @@ export default class Player {
     this.emitter.on(EventTypes.AAC_ARRIVED, this.onAACArrivedHandler);
   }
 
-  public async load(url) {
+  public async load(url: string) {
     if (this.videoDecoder == null) {
       this.videoDecoder = new VideoDecoder({
         output: (videoFrame) => {
@@ -95,14 +96,14 @@ export default class Player {
     videoFrame.close()
   }
 
-  pushAudioFrame(audioFrame: AudioFrame) {
+  pushAudioFrame(audioFrame: AudioData) {
     this.audioTrackGeneratorWriter?.write(audioFrame);
     audioFrame.close();
   }
 
   private onH264Arrived({ begin, data, has_IDR }: Events[typeof EventTypes.H264_ARRIVED]) {
     const encodedVideoChunk = new EncodedVideoChunk({
-      key: has_IDR,
+      type: has_IDR ? 'key' : 'delta',
       timestamp: begin * 1000,
       data: data,
     });
@@ -119,5 +120,4 @@ export default class Player {
 
     this.audioDecoder?.decode(encodedAudioChunk);
   }
-
 };
