@@ -1,6 +1,6 @@
 import Source from "./source";
 
-export default class HTTPStreamingSource extends Source{  
+export default class HTTPStreamingWindowSource extends Source{  
   private fetchReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private abortController: AbortController | null = null;
 

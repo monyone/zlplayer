@@ -52,49 +52,54 @@ const resetAudioDecoder = async () => {
 
 self.onmessage = async ({ data }) => {
   const { event } = data;
-  if (event === EventTypes.H264_ARRIVED) {
-    const { begin, data: rawData, has_IDR } = data;
-
-    videoKeyFrameArrived ||= has_IDR;
-    if (!videoKeyFrameArrived) { return; }
-
-    const encodedVideoChunk = new EncodedVideoChunk({
-      type: has_IDR ? 'key' : 'delta',
-      timestamp: begin * 1000000,
-      data: rawData,
-    });
-
-    try {
-      videoDecoder?.decode(encodedVideoChunk);
-    } catch (e: unknown) {
-      self.postMessage({
-        event: EventTypes.VIDEO_DECODE_ERROR,
-        error: e,
+  switch(event) {
+    case EventTypes.H264_ARRIVED: {
+      const { begin, data: rawData, has_IDR } = data;
+      
+      videoKeyFrameArrived ||= has_IDR;
+      if (!videoKeyFrameArrived) { return; }
+  
+      const encodedVideoChunk = new EncodedVideoChunk({
+        type: has_IDR ? 'key' : 'delta',
+        timestamp: begin * 1000000,
+        data: rawData,
       });
-      await resetVideoDecoder();
+  
+      try {
+        videoDecoder?.decode(encodedVideoChunk);
+      } catch (e: unknown) {
+        self.postMessage({
+          event: EventTypes.VIDEO_DECODE_ERROR,
+          error: e,
+        });
+        await resetVideoDecoder();
+      }
+      break;
     }
-  } else if (event === EventTypes.AAC_ARRIVED) {
-    const { begin, data: rawData } = data;
+    case EventTypes.AAC_ARRIVED: {
+      const { begin, data: rawData } = data;
     
-    const encodedAudioChunk = new EncodedAudioChunk({
-      type: 'key',
-      timestamp: begin * 1000000,
-      data: rawData,
-    });
-
-    try {
-      audioDecoder?.decode(encodedAudioChunk);
-    } catch (e: unknown) {
-      self.postMessage({
-        event: EventTypes.AUDIO_DECODE_ERROR,
-        error: e,
+      const encodedAudioChunk = new EncodedAudioChunk({
+        type: 'key',
+        timestamp: begin * 1000000,
+        data: rawData,
       });
-      await resetAudioDecoder();
+
+      try {
+        audioDecoder?.decode(encodedAudioChunk);
+      } catch (e: unknown) {
+        self.postMessage({
+          event: EventTypes.AUDIO_DECODE_ERROR,
+          error: e,
+        });
+        await resetAudioDecoder();
+      }
+      break;
     }
-  } else if (event === 'INIT_DECODER') {
-    await resetVideoDecoder();
-    await resetAudioDecoder();
+    case EventTypes.DECODER_INITIALIZE: {
+      await resetVideoDecoder();
+      await resetAudioDecoder();
+      break;
+    }
   }
 }
-
-export default "";

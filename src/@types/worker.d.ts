@@ -1,4 +1,4 @@
-declare module "worker-loader!*" {
+declare module "worker-loader?inline=no-fallback!*" {
   class WebpackWorker extends Worker {
       constructor();
   }

@@ -1,3 +1,6 @@
 export { default as Player } from './player/player'
-export { default as HTTPStreamingSource } from './source/http-streaming-source'
+export { default as HTTPStreamingWindowSource } from './source/http-streaming-window-source'
+export { default as HTTPStreamingWorkerSource } from './source/http-streaming-worker-source'
 export { default as PassThrough } from './buffering/pass-through'
+export { default as WindowDecoder } from './decoder/window-decoder'
+export { default as WorkerDecoder } from './decoder/worker-decoder'

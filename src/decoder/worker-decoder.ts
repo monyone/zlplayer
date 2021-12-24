@@ -1,7 +1,8 @@
 import EventEmitter from '../event/eventemitter';
 import { Events, EventTypes } from '../event/events';
+
 import Decoder from './decoder';
-import Worker from 'worker-loader!./decoding.worker'
+import Worker from 'worker-loader?inline=no-fallback!./decoding.worker'
 
 export default class WorkerDecoder extends Decoder{  
   private emitter: EventEmitter | null = null;
@@ -21,16 +22,37 @@ export default class WorkerDecoder extends Decoder{
     this.worker.onmessage = ((message) => {
       const { event } = message.data;
 
-      if (event === EventTypes.VIDEO_FRAME_DECODED) {
-        this.emitter?.emit(EventTypes.VIDEO_FRAME_DECODED, {
-          event: EventTypes.VIDEO_FRAME_DECODED,
-          frame: message.data.frame
-        });
-      } else if(event === EventTypes.AUDIO_FRAME_DECODED) {
-        this.emitter?.emit(EventTypes.AUDIO_FRAME_DECODED, {
-          event: EventTypes.AUDIO_FRAME_DECODED,
-          frame: message.data.frame
-        });
+      switch(event) {
+        case EventTypes.VIDEO_FRAME_DECODED: {
+          this.emitter?.emit(EventTypes.VIDEO_FRAME_DECODED, {
+            event: EventTypes.VIDEO_FRAME_DECODED,
+            frame: message.data.frame
+          });
+          break;
+        }
+        case EventTypes.AUDIO_FRAME_DECODED: {
+          this.emitter?.emit(EventTypes.AUDIO_FRAME_DECODED, {
+            event: EventTypes.AUDIO_FRAME_DECODED,
+            frame: message.data.frame
+          });
+          break;
+        }
+        case EventTypes.VIDEO_DECODE_ERROR: {
+          const { error } = message.data;
+          this.emitter?.emit(EventTypes.VIDEO_DECODE_ERROR, {
+            event: EventTypes.VIDEO_DECODE_ERROR,
+            error,
+          });
+          break;
+        }
+        case EventTypes.AUDIO_DECODE_ERROR: {
+          const { error } = message.data;
+          this.emitter?.emit(EventTypes.AUDIO_DECODE_ERROR, {
+            event: EventTypes.AUDIO_DECODE_ERROR,
+            error,
+          });
+          break;
+        }
       }
     });
   }
@@ -47,7 +69,7 @@ export default class WorkerDecoder extends Decoder{
   }
 
   public async init(): Promise<void> {
-    this.worker.postMessage({ event: 'INIT_DECODER' });
+    this.worker.postMessage({ event: EventTypes.DECODER_INITIALIZE });
   }
 
   private async onH264Arrived(payload: Events[typeof EventTypes.H264_ARRIVED]) {

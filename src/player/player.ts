@@ -1,4 +1,4 @@
-import HTTPStreamingSource from '../source/http-streaming-source';
+import HTTPStreamingWorkerSource from '../source/http-streaming-worker-source';
 import PassThrough from '../buffering/pass-through'
 import Demuxer from '../demux/demuxer';
 import EventEmitter from '../event/eventemitter';
@@ -7,6 +7,7 @@ import PacketChunker from '../mpegts/packet-chunker';
 import BufferingStrategy from '../buffering/buffering-strategy';
 import Source from '../source/source';
 import Decoder from '../decoder/decoder';
+import WindowDecoder from '../decoder/window-decoder';
 import WorkerDecoder from '../decoder/worker-decoder';
 
 
@@ -41,7 +42,7 @@ export default class Player {
     this.emitter = new EventEmitter();
     this.option = option ?? {};
 
-    this.source = this.option.source ?? new HTTPStreamingSource();
+    this.source = this.option.source ?? new HTTPStreamingWorkerSource();
     this.decoder = this.option.decoder ?? new WorkerDecoder();
     this.decoder.setEmitter(this.emitter);
 
