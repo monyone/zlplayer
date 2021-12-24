@@ -16,6 +16,10 @@ export default class Chunks {
     return this.total;
   }
 
+  public expect(): number {
+    return this.expected;
+  }
+
   public concat(): Uint8Array {
     const result = new Uint8Array(this.total);
     for (let i = 0, offset = 0; i < this.chunks.length; offset += this.chunks[i].byteLength, i++) {

@@ -25,11 +25,11 @@ export default class SectionDecoder {
     return this.pid;
   }
 
-  public add(packet: Uint8Array): Uint8Array[] {
-    if (this.pid !== pid(packet)) { return []; }
-    if (transport_error_indicator(packet)) { return []; }
+  public add(packet: Uint8Array): Uint8Array[] | null {
+    if (this.pid !== pid(packet)) { return null; }
+    if (transport_error_indicator(packet)) { return null; }
 
-    const result = [];
+    let result: Uint8Array[] | null = null;
 
     if (payload_unit_start_indicator(packet)) {
       const offset = HEADER_LENGTH + (has_adaptation_field(packet) ? 1 : 0) + adaptation_field_length(packet);
@@ -38,7 +38,8 @@ export default class SectionDecoder {
       if (this.chunks) {
         this.chunks.push(packet.slice(offset + 1, offset + 1 + pointer_field));
         
-        if (this.chunks.isFull()) {        
+        if (this.chunks.isFull()) {  
+          if (result == null) { result = []; }      
           result.push(this.chunks.concat());
           this.chunks = null;
         } else {
@@ -46,29 +47,36 @@ export default class SectionDecoder {
         }
       }
 
-      for (let begin = offset + 1 + pointer_field; offset < PACKET_LENGTH; ) {
+      for (let begin = offset + 1 + pointer_field; begin < PACKET_LENGTH; ) {
         if (packet[begin + 0] === STUFFING_BYTE) { break; }
 
-        const length: number = this.chunks?.length() ?? section_length(packet);
+        const length: number = this.chunks?.expect() ?? (3 + section_length(packet.slice(begin)));
         if (this.chunks == null) {
           this.chunks = new Chunks(length);
         }
+        const rest: number = length - this.chunks.length();
 
-        this.chunks.push(packet.slice(begin, Math.min(begin + length, PACKET_LENGTH)));
-        if (this.chunks.isFull()) {        
+        this.chunks.push(packet.slice(begin, Math.min(begin + rest, PACKET_LENGTH)));
+        if (this.chunks.isFull()) {  
+          if (result == null) { result = []; }            
           result.push(this.chunks.concat());
           this.chunks = null;
         } else if (this.chunks.isOver()) {
           this.chunks = null;
         }
+
+        begin += rest;
       }
     } else if (this.chunks == null) {
-      return [];
+      return null;
     } else {
       const begin = HEADER_LENGTH + (has_adaptation_field(packet) ? 1 : 0) + adaptation_field_length(packet);
-      this.chunks.push(packet.slice(begin));
+      const length: number = this.chunks.expect()
+      const rest = length - this.chunks.length();
+      this.chunks.push(packet.slice(begin, Math.min(begin + rest, PACKET_LENGTH)));
 
-      if (this.chunks.isFull()) {        
+      if (this.chunks.isFull()) {      
+        if (result == null) { result = []; }        
         result.push(this.chunks.concat());
         this.chunks = null;
       } else if (this.chunks.isOver()) {

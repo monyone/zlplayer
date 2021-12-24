@@ -18,10 +18,10 @@ module.exports = {
       {
         test: /\.ts$/,
         use: [
-          { loader: 'babel-loader'},
+          { loader: 'babel-loader' },
           { loader: 'ts-loader' },
         ],
-      }
+      },
     ]
   }
 }

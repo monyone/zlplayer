@@ -1,9 +1,12 @@
-export default class PassThrough {  
+import BufferingStrategy from "./buffering-strategy";
+
+export default class PassThrough extends BufferingStrategy{
   private inputReader: ReadableStreamDefaultReader<Uint8Array>;
   private outputStream: ReadableStream<Uint8Array>;
   private outputController: ReadableStreamController<Uint8Array> | null = null; 
 
   public constructor (readbableStream: ReadableStream<Uint8Array>) {
+    super();
     this.inputReader = readbableStream.getReader();
 
     const object = this;

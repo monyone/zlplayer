@@ -93,10 +93,10 @@ export default class Demuxer {
       }
 
       if (packet_pid === this.PATDecoder.getPid()) {
-        const result: Uint8Array[] = this.PATDecoder.add(packet);
-        for (let i = 0; i < result.length; i++){
+        const result = this.PATDecoder.add(packet);
+        for (let i = 0; result && i < result.length; i++){
           const PAT = result[i];
-
+          
           for (let offset = EXTENDED_HEADER_SIZE; offset < PAT.length - CRC_SIZE; offset += 4) {
             const program_number = (PAT[offset + 0] << 8) | (PAT[offset + 1]);
             const PID = ((PAT[offset + 2] & 0x1F) << 8) | (PAT[offset + 3]);
@@ -108,8 +108,8 @@ export default class Demuxer {
           }
         }
       }else if(packet_pid === this.PMTDecoder?.getPid()) {
-        const result: Uint8Array[] = this.PMTDecoder!.add(packet);
-        for (let i = 0; i < result.length; i++){
+        const result = this.PMTDecoder!.add(packet);
+        for (let i = 0; result && i < result.length; i++){
           const PMT = result[i];
 
           if (this.PCR_PID == null) {
@@ -132,13 +132,14 @@ export default class Demuxer {
               this.MPEG2Decoder = new PESDecoder(elementary_PID);
             }
 
-            offset += ES_info_length;
+            offset += 5 + ES_info_length;
           }
         } 
       } else if(packet_pid === this.VideoDecoder?.getPid()) {
-        const result: Uint8Array[] = this.VideoDecoder!.add(packet);
-        for (let i = 0; i < result.length; i++){
+        const result = this.VideoDecoder!.add(packet);
+        for (let i = 0; result && i < result.length; i++){
           const video = result[i];
+
           if (this.initPTS == null) { continue; }
           if (!has_pts(video)) { continue; }
 
@@ -155,9 +156,10 @@ export default class Demuxer {
           });
         }
       } else if(packet_pid === this.SoundDecoder?.getPid()) {
-        const result: Uint8Array[] = this.SoundDecoder!.add(packet);
-        for (let i = 0; i < result.length; i++){
+        const result = this.SoundDecoder!.add(packet);
+        for (let i = 0; result && i < result.length; i++){
           const sound = result[i];
+
           if (this.initPTS == null) { continue; }
           if (!has_pts(sound)) { continue; }
 
@@ -173,9 +175,10 @@ export default class Demuxer {
           });
         }
       } else if(packet_pid === this.ID3Decoder?.getPid()) {
-        const result: Uint8Array[] = this.ID3Decoder!.add(packet);
-        for (let i = 0; i < result.length; i++){
+        const result = this.ID3Decoder!.add(packet);
+        for (let i = 0; result && i < result.length; i++){
           const id3 = result[i];
+
           if (this.initPTS == null) { continue; }
           if (!has_pts(id3)) { continue; }
 
@@ -191,9 +194,10 @@ export default class Demuxer {
           });
         }
       } else if(packet_pid === this.MPEG2Decoder?.getPid()) {
-        const result: Uint8Array[] = this.MPEG2Decoder!.add(packet);
-        for (let i = 0; i < result.length; i++){
+        const result = this.MPEG2Decoder!.add(packet);
+        for (let i = 0; result && i < result.length; i++){
           const mpeg2 = result[i];
+
           if (this.initPTS == null) { continue; }
           if (!has_pts(mpeg2)) { continue; }
           

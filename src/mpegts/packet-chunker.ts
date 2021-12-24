@@ -26,6 +26,10 @@ export default class PacketChunker {
     return !!(self.ReadableStream);
   }
 
+  public getStream(): ReadableStream<Uint8Array> {
+    return this.outputStream;
+  }
+
   public abort() {
     try {
       this.inputReader?.cancel();
