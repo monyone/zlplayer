@@ -1,3 +1,5 @@
+export { Events, EventTypes } from './event/events'
+export { default as EventEmitter } from './event/eventemitter'
 export { default as Player } from './player/player'
 export { default as HTTPStreamingWindowSource } from './source/http-streaming-window-source'
 export { default as HTTPStreamingWorkerSource } from './source/http-streaming-worker-source'
