@@ -1,5 +1,6 @@
 import EventEmitter from '../event/eventemitter';
-import { Events, EventTypes } from '../event/events';
+import { Events as PlayerEvents, EventTypes as PlayerEventTypes } from '../event/events';
+import { Events, EventTypes } from './worker-decoder-events';
 
 import Decoder from './decoder';
 import Worker from 'worker-loader?inline=no-fallback!./decoding.worker'
@@ -24,31 +25,31 @@ export default class WorkerDecoder extends Decoder{
 
       switch(event) {
         case EventTypes.VIDEO_FRAME_DECODED: {
-          this.emitter?.emit(EventTypes.VIDEO_FRAME_DECODED, {
-            event: EventTypes.VIDEO_FRAME_DECODED,
+          this.emitter?.emit(PlayerEventTypes.VIDEO_FRAME_DECODED, {
+            event: PlayerEventTypes.VIDEO_FRAME_DECODED,
             frame: message.data.frame
           });
           break;
         }
         case EventTypes.AUDIO_FRAME_DECODED: {
-          this.emitter?.emit(EventTypes.AUDIO_FRAME_DECODED, {
-            event: EventTypes.AUDIO_FRAME_DECODED,
+          this.emitter?.emit(PlayerEventTypes.AUDIO_FRAME_DECODED, {
+            event: PlayerEventTypes.AUDIO_FRAME_DECODED,
             frame: message.data.frame
           });
           break;
         }
         case EventTypes.VIDEO_DECODE_ERROR: {
           const { error } = message.data;
-          this.emitter?.emit(EventTypes.VIDEO_DECODE_ERROR, {
-            event: EventTypes.VIDEO_DECODE_ERROR,
+          this.emitter?.emit(PlayerEventTypes.VIDEO_DECODE_ERROR, {
+            event: PlayerEventTypes.VIDEO_DECODE_ERROR,
             error,
           });
           break;
         }
         case EventTypes.AUDIO_DECODE_ERROR: {
           const { error } = message.data;
-          this.emitter?.emit(EventTypes.AUDIO_DECODE_ERROR, {
-            event: EventTypes.AUDIO_DECODE_ERROR,
+          this.emitter?.emit(PlayerEventTypes.AUDIO_DECODE_ERROR, {
+            event: PlayerEventTypes.AUDIO_DECODE_ERROR,
             error,
           });
           break;
@@ -59,24 +60,24 @@ export default class WorkerDecoder extends Decoder{
 
   public setEmitter(emitter: EventEmitter) {
     if (this.emitter) {
-      this.emitter.off(EventTypes.H264_ARRIVED, this.onH264ArrivedHandler);
-      this.emitter.off(EventTypes.AAC_ARRIVED, this.onAACArrivedHandler);
+      this.emitter.off(PlayerEventTypes.H264_ARRIVED, this.onH264ArrivedHandler);
+      this.emitter.off(PlayerEventTypes.AAC_ARRIVED, this.onAACArrivedHandler);
     }
 
     this.emitter = emitter;
-    this.emitter.on(EventTypes.H264_ARRIVED, this.onH264ArrivedHandler);
-    this.emitter.on(EventTypes.AAC_ARRIVED, this.onAACArrivedHandler);
+    this.emitter.on(PlayerEventTypes.H264_ARRIVED, this.onH264ArrivedHandler);
+    this.emitter.on(PlayerEventTypes.AAC_ARRIVED, this.onAACArrivedHandler);
   }
 
   public async init(): Promise<void> {
     this.worker.postMessage({ event: EventTypes.DECODER_INITIALIZE });
   }
 
-  private async onH264Arrived(payload: Events[typeof EventTypes.H264_ARRIVED]) {
-    this.worker.postMessage(payload);
+  private async onH264Arrived(payload: PlayerEvents[typeof PlayerEventTypes.H264_ARRIVED]) {
+    this.worker.postMessage(payload as Events[typeof EventTypes.H264_ARRIVED]);
   }
 
-  private async onAACArrived(payload: Events[typeof EventTypes.AAC_ARRIVED]) {
-    this.worker.postMessage(payload);
+  private async onAACArrived(payload: PlayerEvents[typeof PlayerEventTypes.AAC_ARRIVED]) {
+    this.worker.postMessage(payload as Events[typeof EventTypes.AAC_ARRIVED]);
   }
 };

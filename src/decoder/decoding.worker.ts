@@ -1,4 +1,4 @@
-import { EventTypes } from '../event/events';
+import { EventTypes } from './worker-decoder-events';
 
 let videoDecoder: VideoDecoder | null = null;
 let audioDecoder: AudioDecoder | null = null;

@@ -28,6 +28,7 @@ self.onmessage = async ({ data }) => {
         }
   
         fetchReader = result.body.getReader();
+        self.postMessage({ event: EventTypes.LOAD_SUCCEEDED });
         pump();
       } catch (e: unknown) {
       }
