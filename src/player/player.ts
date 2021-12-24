@@ -4,69 +4,62 @@ import Demuxer from '../demux/demuxer';
 import EventEmitter from '../event/eventemitter';
 import { Events, EventTypes } from '../event/events';
 import PacketChunker from '../mpegts/packet-chunker';
+import BufferingStrategy from '../buffering/buffering-strategy';
+import Source from '../source/source';
+import Decoder from '../decoder/decoder';
+import WorkerDecoder from '../decoder/worker-decoder';
+
+
+type PlayerOptions = {
+  source?: Source,
+  bufferingStrategy?: BufferingStrategy;
+  decoder?: Decoder
+}
 
 export default class Player {  
   private emitter: EventEmitter;
+  private option: PlayerOptions;
 
-  private source: HTTPStreamingSource; 
-  private buffering: PassThrough | null = null;
+  private source: Source; 
+  private buffering: BufferingStrategy | null = null;
   private chunker: PacketChunker | null = null;
   private demuxer: Demuxer | null = null;
+  private decoder: Decoder;
 
   private media: HTMLMediaElement | null = null;;
   private videoTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
   private audioTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
-  private videoDecoder: VideoDecoder | null = null;
-  private audioDecoder: AudioDecoder | null = null;
 
-  private readonly onH264ArrivedHandler = this.onH264Arrived.bind(this);
-  private readonly onAACArrivedHandler = this.onAACArrived.bind(this);
+  private readonly onVideoFrameDecodedHandler = this.onVideoFrameDecoded.bind(this);
+  private readonly onAudioFrameDecodedHandler = this.onAudioFrameDecoded.bind(this);
 
   static isSupported () {
-    return true;
+    return window.isSecureContext && !!(window.VideoFrame) && !!(window.AudioData) && !!(window.VideoDecoder) && !!(window.AudioDecoder) && !!(window.EncodedVideoChunk) && !!(window.EncodedAudioChunk);
   }
   
-  public constructor() {
+  public constructor(option?: PlayerOptions) {
     this.emitter = new EventEmitter();
+    this.option = option ?? {};
 
-    this.source = new HTTPStreamingSource();
+    this.source = this.option.source ?? new HTTPStreamingSource();
+    this.decoder = this.option.decoder ?? new WorkerDecoder();
+    this.decoder.setEmitter(this.emitter);
 
-    this.emitter.on(EventTypes.H264_ARRIVED, this.onH264ArrivedHandler);
-    this.emitter.on(EventTypes.AAC_ARRIVED, this.onAACArrivedHandler);
+    this.emitter.on(EventTypes.VIDEO_FRAME_DECODED, this.onVideoFrameDecodedHandler);
+    this.emitter.on(EventTypes.AUDIO_FRAME_DECODED, this.onAudioFrameDecodedHandler);
   }
 
-  public async load(url: string) {
-    if (this.videoDecoder == null) {
-      this.videoDecoder = new VideoDecoder({
-        output: (videoFrame) => {
-          this.pushVideoFrame(videoFrame);
-        },
-        error: () => {},
-      })
-      await this.videoDecoder.configure({
-        codec: 'avc1.64001f',
-        hardwareAcceleration: "prefer-hardware",
-      });
+  public async load(url: string): Promise<boolean> {
+    if (!(await this.source.load(url))) {
+      return false;
     }
 
-    if (this.audioDecoder == null) {
-      const audioDecoder = new AudioDecoder({
-        output: (audioFrame) => {
-          this.pushAudioFrame(audioFrame)
-        },
-        error: () => {},
-      });
-      await audioDecoder.configure({
-        codec: 'mp4a.40.2',
-        sampleRate: 48000,
-        numberOfChannels: 2,
-      });
-    }
-
-    await this.source.load(url);
-    this.buffering = new PassThrough(this.source.getStream());
+    this.buffering = this.option.bufferingStrategy ?? new PassThrough(this.source.getStream());
     this.chunker = new PacketChunker(this.buffering.getStream());
-    this.demuxer = new Demuxer(this.buffering.getStream(), this.emitter);
+    this.demuxer = new Demuxer(this.chunker.getStream(), this.emitter);
+    await this.decoder.init();
+
+    return true;
   }
   
   public attachMedia(media: HTMLMediaElement): void {
@@ -80,7 +73,20 @@ export default class Player {
     const mediaStream = new MediaStream();
     mediaStream.addTrack(videoTrackGenerator);
     mediaStream.addTrack(audioTrackGenerator);
-    media.srcObject = mediaStream;
+    this.media.srcObject = mediaStream;
+  }
+
+  public abort(): void {
+    this.demuxer?.abort();
+    this.chunker?.abort();
+    this.buffering?.abort();
+    this.source.abort();
+  }
+
+  public stop(): void {
+    this.abort();
+    this.media?.removeAttribute('src');
+    this.media?.load();
   }
 
   public on<T extends keyof Events>(type: T, handler: ((payload: Events[T]) => void)): void {
@@ -101,23 +107,11 @@ export default class Player {
     audioFrame.close();
   }
 
-  private onH264Arrived({ begin, data, has_IDR }: Events[typeof EventTypes.H264_ARRIVED]) {
-    const encodedVideoChunk = new EncodedVideoChunk({
-      type: has_IDR ? 'key' : 'delta',
-      timestamp: begin * 1000,
-      data: data,
-    });
-
-    this.videoDecoder?.decode(encodedVideoChunk);
+  private async onVideoFrameDecoded({ frame }: Events[typeof EventTypes.VIDEO_FRAME_DECODED]) {
+    this.pushVideoFrame(frame);
   }
 
-  private onAACArrived({ begin, data}: Events[typeof EventTypes.AAC_ARRIVED]) {
-    const encodedAudioChunk = new EncodedAudioChunk({
-      type: 'key',
-      timestamp: begin * 1000,
-      data: data,
-    });
-
-    this.audioDecoder?.decode(encodedAudioChunk);
+  private async onAudioFrameDecoded({ frame }: Events[typeof EventTypes.AUDIO_FRAME_DECODED]) {
+    this.pushAudioFrame(frame);
   }
 };

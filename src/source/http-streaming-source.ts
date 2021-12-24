@@ -1,4 +1,6 @@
-export default class HTTPStreamingSource {  
+import Source from "./source";
+
+export default class HTTPStreamingSource extends Source{  
   private fetchReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private abortController: AbortController | null = null;
 
@@ -6,6 +8,7 @@ export default class HTTPStreamingSource {
   private outputController: ReadableStreamController<Uint8Array> | null = null; 
 
   public constructor () {
+    super();
     const global = this;
     this.outputStream = new ReadableStream<Uint8Array>({      
       start (controller) {
