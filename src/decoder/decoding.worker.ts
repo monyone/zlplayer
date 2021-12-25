@@ -53,7 +53,7 @@ const resetAudioDecoder = async () => {
 self.onmessage = async ({ data }) => {
   const { event } = data;
   switch(event) {
-    case EventTypes.H264_ARRIVED: {
+    case EventTypes.H264_EMITTED: {
       const { begin, data: rawData, has_IDR } = data;
       
       videoKeyFrameArrived ||= has_IDR;
@@ -76,7 +76,7 @@ self.onmessage = async ({ data }) => {
       }
       break;
     }
-    case EventTypes.AAC_ARRIVED: {
+    case EventTypes.AAC_EMITTED: {
       const { begin, data: rawData } = data;
     
       const encodedAudioChunk = new EncodedAudioChunk({

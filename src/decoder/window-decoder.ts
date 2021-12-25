@@ -9,8 +9,8 @@ export default class WindowDecoder extends Decoder {
   private audioDecoder: AudioDecoder | null = null;
   private videoKeyFrameArrived: boolean = false;
 
-  private readonly onH264ArrivedHandler = this.onH264Arrived.bind(this);
-  private readonly onAACArrivedHandler = this.onAACArrived.bind(this);
+  private readonly onH264EmittedHandler = this.onH264Emitted.bind(this);
+  private readonly onAACEmittedHandler = this.onAACEmitted.bind(this);
 
   static isSupported () {
     return window.isSecureContext && !!(window.VideoFrame) && !!(window.AudioData) && !!(window.VideoDecoder) && !!(window.AudioDecoder) && !!(window.EncodedVideoChunk) && !!(window.EncodedAudioChunk);
@@ -22,13 +22,13 @@ export default class WindowDecoder extends Decoder {
 
   public setEmitter(emitter: EventEmitter) {
     if (this.emitter) {
-      this.emitter.off(EventTypes.H264_ARRIVED, this.onH264ArrivedHandler);
-      this.emitter.off(EventTypes.AAC_ARRIVED, this.onAACArrivedHandler);
+      this.emitter.off(EventTypes.H264_EMITTED, this.onH264EmittedHandler);
+      this.emitter.off(EventTypes.AAC_EMITTED, this.onAACEmittedHandler);
     }
 
     this.emitter = emitter;
-    this.emitter.on(EventTypes.H264_ARRIVED, this.onH264ArrivedHandler);
-    this.emitter.on(EventTypes.AAC_ARRIVED, this.onAACArrivedHandler);
+    this.emitter.on(EventTypes.H264_EMITTED, this.onH264EmittedHandler);
+    this.emitter.on(EventTypes.AAC_EMITTED, this.onAACEmittedHandler);
   }
 
   public async init(): Promise<void> {
@@ -80,7 +80,7 @@ export default class WindowDecoder extends Decoder {
     });
   }
 
-  private async onH264Arrived({ begin, data, has_IDR }: Events[typeof EventTypes.H264_ARRIVED]) {
+  private async onH264Emitted({ begin, data, has_IDR }: Events[typeof EventTypes.H264_EMITTED]) {
     this.videoKeyFrameArrived ||= has_IDR;
     if (!this.videoKeyFrameArrived) { return; }
 
@@ -101,7 +101,7 @@ export default class WindowDecoder extends Decoder {
     }
   }
 
-  private async onAACArrived({ begin, data }: Events[typeof EventTypes.AAC_ARRIVED]) {
+  private async onAACEmitted({ begin, data }: Events[typeof EventTypes.AAC_EMITTED]) {
     const encodedAudioChunk = new EncodedAudioChunk({
       type: 'key',
       timestamp: begin * 1000000,

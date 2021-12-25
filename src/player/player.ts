@@ -22,9 +22,9 @@ export default class Player {
   private option: PlayerOptions;
 
   private source: Source; 
-  private buffering: BufferingStrategy | null = null;
   private chunker: PacketChunker | null = null;
   private demuxer: Demuxer | null = null;
+  private buffering: BufferingStrategy;
   private decoder: Decoder;
 
   private media: HTMLMediaElement | null = null;;
@@ -43,6 +43,8 @@ export default class Player {
     this.option = option ?? {};
 
     this.source = this.option.source ?? new HTTPStreamingWorkerSource();
+    this.buffering = this.option.bufferingStrategy ?? new PassThrough();
+    this.buffering.setEmitter(this.emitter);
     this.decoder = this.option.decoder ?? new WorkerDecoder();
     this.decoder.setEmitter(this.emitter);
 
@@ -55,8 +57,7 @@ export default class Player {
       return false;
     }
 
-    this.buffering = this.option.bufferingStrategy ?? new PassThrough(this.source.getStream());
-    this.chunker = new PacketChunker(this.buffering.getStream());
+    this.chunker = new PacketChunker(this.source.getStream());
     this.demuxer = new Demuxer(this.chunker.getStream(), this.emitter);
     await this.decoder.init();
 

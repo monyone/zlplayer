@@ -1,4 +1,5 @@
+import EventEmitter from "../event/eventemitter";
 export default abstract class BufferingStrategy {
-  public abstract getStream(): ReadableStream<Uint8Array>;
+  public abstract setEmitter(emitter: EventEmitter): void;
   public abstract abort(): void;
 };

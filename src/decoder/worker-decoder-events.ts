@@ -4,8 +4,8 @@ import {
 } from '../event/events'
 
 export const EventTypes = {
-  [PlayerEventTypes.H264_ARRIVED]: PlayerEventTypes.H264_ARRIVED,
-  [PlayerEventTypes.AAC_ARRIVED]: PlayerEventTypes.AAC_ARRIVED,
+  [PlayerEventTypes.H264_EMITTED]: PlayerEventTypes.H264_EMITTED,
+  [PlayerEventTypes.AAC_EMITTED]: PlayerEventTypes.AAC_EMITTED,
   
   DECODER_INITIALIZE: 'DECODER_INITIALIZE',
 
@@ -15,8 +15,8 @@ export const EventTypes = {
   [PlayerEventTypes.AUDIO_DECODE_ERROR]: PlayerEventTypes.AUDIO_DECODE_ERROR
 } as const;
 
-export type H264_ARRIVED_PAYLOAD = PlayerEvents[typeof PlayerEventTypes.H264_ARRIVED];
-export type AAC_ARRIVED_PAYLOAD = PlayerEvents[typeof PlayerEventTypes.AAC_ARRIVED];
+export type H264_EMITTED_PAYLOAD = PlayerEvents[typeof PlayerEventTypes.H264_EMITTED];
+export type AAC_EMITTED_PAYLOAD = PlayerEvents[typeof PlayerEventTypes.AAC_EMITTED];
 export type DECODER_INITIALIZE_PAYLOAD = {
   event: typeof EventTypes.DECODER_INITIALIZE;
 };
@@ -26,8 +26,8 @@ export type VIDEO_DECODE_ERROR_PAYLOAD = PlayerEvents[typeof PlayerEventTypes.VI
 export type AUDIO_DECODE_ERROR_PAYLOAD = PlayerEvents[typeof PlayerEventTypes.AUDIO_DECODE_ERROR];
 
 export type Events = {
-  [EventTypes.H264_ARRIVED]: H264_ARRIVED_PAYLOAD,
-  [EventTypes.AAC_ARRIVED]: AAC_ARRIVED_PAYLOAD,
+  [EventTypes.H264_EMITTED]: H264_EMITTED_PAYLOAD,
+  [EventTypes.AAC_EMITTED]: AAC_EMITTED_PAYLOAD,
   
   [EventTypes.DECODER_INITIALIZE]: DECODER_INITIALIZE_PAYLOAD,
 

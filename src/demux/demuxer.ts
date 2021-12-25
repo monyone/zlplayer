@@ -146,8 +146,8 @@ export default class Demuxer {
           const video_pts: number = pts(video)!;
           const video_elapsed_seconds: number = ((video_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
 
-          this.emitter.emit(EventTypes.H264_ARRIVED, {
-            event: EventTypes.H264_ARRIVED,
+          this.emitter.emit(EventTypes.H264_PARSED, {
+            event: EventTypes.H264_PARSED,
             initPTS: this.initPTS,
             pts: video_pts,
             begin: video_elapsed_seconds,
@@ -166,8 +166,8 @@ export default class Demuxer {
           const sound_pts: number = pts(sound)!;
           const sound_elapsed_seconds: number = ((sound_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
 
-          this.emitter.emit(EventTypes.AAC_ARRIVED, {
-            event: EventTypes.AAC_ARRIVED,
+          this.emitter.emit(EventTypes.AAC_PARSED, {
+            event: EventTypes.AAC_PARSED,
             initPTS: this.initPTS,
             pts: sound_pts,
             begin: sound_elapsed_seconds,
@@ -185,8 +185,8 @@ export default class Demuxer {
           const id3_pts: number = pts(id3)!;
           const id3_elapsed_seconds: number = ((id3_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
 
-          this.emitter.emit(EventTypes.ID3_ARRIVED, {
-            event: EventTypes.ID3_ARRIVED,
+          this.emitter.emit(EventTypes.ID3_PARSED, {
+            event: EventTypes.ID3_PARSED,
             initPTS: this.initPTS,
             pts: id3_pts,
             begin: id3_elapsed_seconds,
@@ -203,8 +203,8 @@ export default class Demuxer {
           
           const mpeg2_pts: number = pts(mpeg2)!;
           const mpeg2_elapsed_seconds: number = ((mpeg2_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
-          this.emitter.emit(EventTypes.ID3_ARRIVED, {
-            event: EventTypes.ID3_ARRIVED,
+          this.emitter.emit(EventTypes.ID3_PARSED, {
+            event: EventTypes.ID3_PARSED,
             initPTS: this.initPTS,
             pts: mpeg2_pts,
             begin: mpeg2_elapsed_seconds,
