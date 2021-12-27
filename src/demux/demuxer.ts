@@ -48,10 +48,12 @@ export default class Demuxer {
 
   private PCR_PID: number | null = null;
   private initPTS: number | null = null;
+  private isFirstAAC: boolean;;
 
   public constructor (reader: ReadableStream<Uint8Array>, emitter: EventEmitter) {
     this.inputReader = reader.getReader();
     this.emitter = emitter;
+    this.isFirstAAC = true;
     this.pump();
   }
 
@@ -150,7 +152,7 @@ export default class Demuxer {
             event: EventTypes.H264_PARSED,
             initPTS: this.initPTS,
             pts: video_pts,
-            begin: video_elapsed_seconds,
+            timestamp: video_elapsed_seconds,
             data: PES_packet_data(video),
             has_IDR: has_IDR(video)
           });
@@ -170,9 +172,11 @@ export default class Demuxer {
             event: EventTypes.AAC_PARSED,
             initPTS: this.initPTS,
             pts: sound_pts,
-            begin: sound_elapsed_seconds,
+            timestamp: this.isFirstAAC ? 0 : sound_elapsed_seconds,
             data: PES_packet_data(sound)
           });
+
+          this.isFirstAAC = false;
         }
       } else if(packet_pid === this.ID3Decoder?.getPid()) {
         const result = this.ID3Decoder!.add(packet);
@@ -189,7 +193,7 @@ export default class Demuxer {
             event: EventTypes.ID3_PARSED,
             initPTS: this.initPTS,
             pts: id3_pts,
-            begin: id3_elapsed_seconds,
+            timestamp: id3_elapsed_seconds,
             data: PES_packet_data(id3)
           });
         }
@@ -207,7 +211,7 @@ export default class Demuxer {
             event: EventTypes.MPEG2VIDEO_PARSED,
             initPTS: this.initPTS,
             pts: mpeg2_pts,
-            begin: mpeg2_elapsed_seconds,
+            timestamp: mpeg2_elapsed_seconds,
             data: PES_packet_data(mpeg2)
           });
         }

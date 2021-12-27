@@ -80,13 +80,13 @@ export default class WindowDecoder extends Decoder {
     });
   }
 
-  private async onH264Emitted({ begin, data, has_IDR }: Events[typeof EventTypes.H264_EMITTED]) {
+  private async onH264Emitted({ timestamp, data, has_IDR }: Events[typeof EventTypes.H264_EMITTED]) {
     this.videoKeyFrameArrived ||= has_IDR;
     if (!this.videoKeyFrameArrived) { return; }
 
     const encodedVideoChunk = new EncodedVideoChunk({
       type: has_IDR ? 'key' : 'delta',
-      timestamp: begin * 1000000,
+      timestamp: timestamp * 1000000,
       data: data,
     });
 
@@ -101,10 +101,10 @@ export default class WindowDecoder extends Decoder {
     }
   }
 
-  private async onAACEmitted({ begin, data }: Events[typeof EventTypes.AAC_EMITTED]) {
+  private async onAACEmitted({ timestamp, data }: Events[typeof EventTypes.AAC_EMITTED]) {
     const encodedAudioChunk = new EncodedAudioChunk({
       type: 'key',
-      timestamp: begin * 1000000,
+      timestamp: timestamp * 1000000,
       data: data,
     });
 

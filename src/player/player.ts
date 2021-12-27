@@ -10,6 +10,8 @@ import Decoder from '../decoder/decoder';
 import WindowDecoder from '../decoder/window-decoder';
 import WorkerDecoder from '../decoder/worker-decoder';
 
+import { EventTypes as TickerEventTypes } from '../ticker/ticker-events'
+import Ticker from 'worker-loader?inline=no-fallback!../ticker/ticker.worker'
 
 type PlayerOptions = {
   source?: Source,
@@ -26,8 +28,10 @@ export default class Player {
   private demuxer: Demuxer | null = null;
   private buffering: BufferingStrategy;
   private decoder: Decoder;
+  private ticker: Ticker;
 
-  private media: HTMLMediaElement | null = null;;
+  private media: HTMLMediaElement | null = null;
+  private audio: HTMLMediaElement | null = null;
   private videoTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
   private audioTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
 
@@ -47,9 +51,25 @@ export default class Player {
     this.buffering.setEmitter(this.emitter);
     this.decoder = this.option.decoder ?? new WorkerDecoder();
     this.decoder.setEmitter(this.emitter);
+    this.ticker = new Ticker();
 
     this.emitter.on(EventTypes.VIDEO_FRAME_DECODED, this.onVideoFrameDecodedHandler);
     this.emitter.on(EventTypes.AUDIO_FRAME_DECODED, this.onAudioFrameDecodedHandler);
+
+    this.ticker.onmessage = (message) => {
+      const { event } = message.data;
+
+      switch(event) {
+        case TickerEventTypes.TICKER_TICK: {
+          if (this.audio == null) { return; }
+          this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_TICK, {
+            event: EventTypes.AUDIO_TIMESTAMP_TICK,
+            timestamp: this.audio.currentTime
+          });
+          break;
+        }
+      }
+    };
   }
 
   public async load(url: string): Promise<boolean> {
@@ -66,6 +86,11 @@ export default class Player {
   
   public attachMedia(media: HTMLMediaElement): void {
     this.media = media;
+    if (this.audio == null) {
+      this.audio = document.createElement('video');
+    }
+    this.unload();
+    this.audio.muted = true;
 
     const videoTrackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
     const audioTrackGenerator = new MediaStreamTrackGenerator({ kind: 'audio' });
@@ -76,19 +101,48 @@ export default class Player {
     mediaStream.addTrack(videoTrackGenerator);
     mediaStream.addTrack(audioTrackGenerator);
     this.media.srcObject = mediaStream;
+
+    const audioStream = new MediaStream();
+    audioStream.addTrack(audioTrackGenerator);
+    this.audio.srcObject = audioStream;
+
+    try {
+      this.audio.play();
+      this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_ENABLED, {
+        event: EventTypes.AUDIO_TIMESTAMP_ENABLED
+      });
+      this.ticker.postMessage({
+        event: TickerEventTypes.TICKER_START,
+        time: 1000 / 60,
+      });
+    } catch(e: unknown) {
+      this.audio = null;
+      this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_DISABLED, {
+        event: EventTypes.AUDIO_TIMESTAMP_DISABLED
+      });
+      this.ticker.postMessage({
+        event: TickerEventTypes.TICKER_STOP
+      });
+    }
   }
 
-  public abort(): void {
+  private abort(): void {
     this.demuxer?.abort();
     this.chunker?.abort();
     this.buffering?.abort();
     this.source.abort();
   }
 
-  public stop(): void {
-    this.abort();
+  private unload() {
     this.media?.removeAttribute('src');
     this.media?.load();
+    this.audio?.removeAttribute('src');
+    this.audio?.load();
+  }
+
+  public stop(): void {
+    this.abort();
+    this.unload();
   }
 
   public on<T extends keyof Events>(type: T, handler: ((payload: Events[T]) => void)): void {
@@ -99,12 +153,12 @@ export default class Player {
     this.emitter?.off(type, handler);
   }
 
-  pushVideoFrame(videoFrame: VideoFrame) {
+  public pushVideoFrame(videoFrame: VideoFrame) {
     this.videoTrackGeneratorWriter?.write(videoFrame);
     videoFrame.close()
   }
 
-  pushAudioFrame(audioFrame: AudioData) {
+  public pushAudioFrame(audioFrame: AudioData) {
     this.audioTrackGeneratorWriter?.write(audioFrame);
     audioFrame.close();
   }

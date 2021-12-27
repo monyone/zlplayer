@@ -8,6 +8,10 @@ export const EventTypes = {
   AAC_EMITTED: 'AAC_EMITTED',
   MPEG2VIDEO_EMITTED: 'MPEG2VIDEO_EMITTED',
 
+  AUDIO_TIMESTAMP_TICK: 'AUDIO_TIMESTAMP_TICK',
+  AUDIO_TIMESTAMP_ENABLED: 'AUDIO_TIMESTAMP_ENABLED',
+  AUDIO_TIMESTAMP_DISABLED: 'AUDIO_TIMESTAMP_DISABLED',
+
   VIDEO_FRAME_DECODED: 'VIDEO_FRAME_DECODED',
   AUDIO_FRAME_DECODED: 'AUDIO_FRAME_DECODED',
 
@@ -19,7 +23,7 @@ export type H264_PARSED_PAYLOAD = {
   event: typeof EventTypes.H264_PARSED;
   initPTS: number;
   pts: number;
-  begin: number;
+  timestamp: number;
   data: Uint8Array;
   has_IDR: boolean;
 };
@@ -28,7 +32,7 @@ export type AAC_PARSED_PAYLOAD = {
   event: typeof EventTypes.AAC_PARSED;
   initPTS: number;
   pts: number;
-  begin: number;
+  timestamp: number;
   data: Uint8Array;
 };
 
@@ -36,7 +40,7 @@ export type ID3_PARSED_PAYLOAD = {
   event: typeof EventTypes.ID3_PARSED;
   initPTS: number;
   pts: number;
-  begin: number;
+  timestamp: number;
   data: Uint8Array;
 };
 
@@ -44,7 +48,7 @@ export type MPEG2VIDEO_PARSED_PAYLOAD = {
   event: typeof EventTypes.MPEG2VIDEO_PARSED;
   initPTS: number;
   pts: number;
-  begin: number;
+  timestamp: number;
   data: Uint8Array;
 }
 
@@ -52,7 +56,7 @@ export type H264_EMITTED_PAYLOAD = {
   event: typeof EventTypes.H264_EMITTED;
   initPTS: number;
   pts: number;
-  begin: number;
+  timestamp: number;
   data: Uint8Array;
   has_IDR: boolean;
 };
@@ -61,7 +65,7 @@ export type AAC_EMITTED_PAYLOAD = {
   event: typeof EventTypes.AAC_EMITTED;
   initPTS: number;
   pts: number;
-  begin: number;
+  timestamp: number;
   data: Uint8Array;
 };
 
@@ -69,28 +73,41 @@ export type MPEG2VIDEO_EMITTED_PAYLOAD = {
   event: typeof EventTypes.MPEG2VIDEO_EMITTED;
   initPTS: number;
   pts: number;
-  begin: number;
+  timestamp: number;
   data: Uint8Array;
+}
+
+export type AUDIO_TIMESTAMP_TICK_PAYLOAD = {
+  event: typeof EventTypes.AUDIO_TIMESTAMP_TICK;
+  timestamp: number;
+}
+
+export type AUDIO_TIMESTAMP_ENABLED_PAYLOAD = {
+  event: typeof EventTypes.AUDIO_TIMESTAMP_ENABLED;
+}
+
+export type AUDIO_TIMESTAMP_DISABLED_PAYLOAD = {
+  event: typeof EventTypes.AUDIO_TIMESTAMP_DISABLED;
 }
 
 export type VIDEO_FRAME_DECODED_PAYLOAD = {
   event: typeof EventTypes.VIDEO_FRAME_DECODED;
-  frame: VideoFrame
+  frame: VideoFrame;
 }
 
 export type AUDIO_FRAME_DECODED_PAYLOAD = {
   event: typeof EventTypes.AUDIO_FRAME_DECODED;
-  frame: AudioData
+  frame: AudioData;
 }
 
 export type VIDEO_DECODE_ERROR_PAYLOAD = {
-  event: typeof EventTypes.VIDEO_DECODE_ERROR,
-  error: unknown,
+  event: typeof EventTypes.VIDEO_DECODE_ERROR;
+  error: unknown;
 }
 
 export type AUDIO_DECODE_ERROR_PAYLOAD = {
-  event: typeof EventTypes.AUDIO_DECODE_ERROR,
-  error: unknown,
+  event: typeof EventTypes.AUDIO_DECODE_ERROR;
+  error: unknown;
 }
 
 export type Events = {
@@ -102,6 +119,10 @@ export type Events = {
   [EventTypes.H264_EMITTED]: H264_EMITTED_PAYLOAD,
   [EventTypes.AAC_EMITTED]: AAC_EMITTED_PAYLOAD,
   [EventTypes.MPEG2VIDEO_EMITTED]: MPEG2VIDEO_EMITTED_PAYLOAD,
+
+  [EventTypes.AUDIO_TIMESTAMP_TICK]: AUDIO_TIMESTAMP_TICK_PAYLOAD,
+  [EventTypes.AUDIO_TIMESTAMP_ENABLED]: AUDIO_TIMESTAMP_ENABLED_PAYLOAD,
+  [EventTypes.AUDIO_TIMESTAMP_DISABLED]: AUDIO_TIMESTAMP_DISABLED_PAYLOAD,
 
   [EventTypes.VIDEO_FRAME_DECODED]: VIDEO_FRAME_DECODED_PAYLOAD,
   [EventTypes.AUDIO_FRAME_DECODED]: AUDIO_FRAME_DECODED_PAYLOAD,

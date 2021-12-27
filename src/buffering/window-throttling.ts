@@ -104,10 +104,9 @@ export default class WindowThrottling extends BufferingStrategy{
     }
   }
 
-  private async onH264Parsed(payload: Events[typeof EventTypes.H264_PARSED]) {
+  private onH264Parsed(payload: Events[typeof EventTypes.H264_PARSED]) {
     const now = Date.now();
     if (!this.useH264ThrottlingNow(now)) {
-      console.log(now, now - (this.lastH264OutputTimestamp ?? 0), this.h264Queue.length)
       this.lastH264OutputTimestamp = now;
       this.emitter?.emit(EventTypes.H264_EMITTED, { ... payload, event: EventTypes.H264_EMITTED });
     } else if (this.h264Queue.length === 0) {
@@ -119,7 +118,7 @@ export default class WindowThrottling extends BufferingStrategy{
     }
   }
 
-  private async onAACParsed(payload: Events[typeof EventTypes.AAC_PARSED]) {
+  private onAACParsed(payload: Events[typeof EventTypes.AAC_PARSED]) {
     const now = Date.now();
     if (!this.useAACThrottlingNow(now)) {
       this.lastAACOutputTimestamp = now;
@@ -133,7 +132,7 @@ export default class WindowThrottling extends BufferingStrategy{
     }
   }
   
-  private async onMPEG2VideoParsed(payload: Events[typeof EventTypes.MPEG2VIDEO_PARSED]) {
+  private onMPEG2VideoParsed(payload: Events[typeof EventTypes.MPEG2VIDEO_PARSED]) {
     const now = Date.now();
     if (!this.useMPEG2VideoThrottlingNow(now)) {
       this.lastMPEG2VideoOutputTimestamp = now;
@@ -152,7 +151,6 @@ export default class WindowThrottling extends BufferingStrategy{
     const emit = this.h264Queue.shift();
     if (emit == null) { return; }
     
-    console.log(now, now - (this.lastH264OutputTimestamp ?? 0), this.h264Queue.length)
     this.emitter?.emit(EventTypes.H264_EMITTED, { ... emit, event: EventTypes.H264_EMITTED });
     this.lastH264OutputTimestamp = now;
 

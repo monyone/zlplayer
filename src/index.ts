@@ -10,6 +10,7 @@ export { default as HTTPStreamingWorkerSource } from './source/http-streaming-wo
 export { default as BufferingStrategy } from './buffering/buffering-strategy'
 export { default as PassThrough } from './buffering/pass-through'
 export { default as WindowThrottling } from './buffering/window-throttling'
+export { default as AudioBasedThrottling } from './buffering/audio-based-throttling'
 
 export { default as Decoder } from './decoder/decoder'
 export { default as WindowDecoder } from './decoder/window-decoder'
