@@ -203,8 +203,8 @@ export default class Demuxer {
           
           const mpeg2_pts: number = pts(mpeg2)!;
           const mpeg2_elapsed_seconds: number = ((mpeg2_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
-          this.emitter.emit(EventTypes.ID3_PARSED, {
-            event: EventTypes.ID3_PARSED,
+          this.emitter.emit(EventTypes.MPEG2VIDEO_PARSED, {
+            event: EventTypes.MPEG2VIDEO_PARSED,
             initPTS: this.initPTS,
             pts: mpeg2_pts,
             begin: mpeg2_elapsed_seconds,
