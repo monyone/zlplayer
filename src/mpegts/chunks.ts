@@ -22,8 +22,9 @@ export default class Chunks {
 
   public concat(): Uint8Array {
     const result = new Uint8Array(this.total);
-    for (let i = 0, offset = 0; i < this.chunks.length; offset += this.chunks[i].byteLength, i++) {
+    for (let i = 0, offset = 0; i < this.chunks.length; i++) {
       result.set(this.chunks[i], offset);
+      offset += this.chunks[i].byteLength;
     }
     return result;
   }

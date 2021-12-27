@@ -58,18 +58,21 @@ export default class PacketChunker {
       let lastPosition: number | null = null;
       for (let i = 0; i < chunk.length; i++) {
         if (chunk[i] === SYNC_BYTE) {
-          if (i + PACKET_LENGTH >= chunk.length) {
+          if (i + PACKET_LENGTH > chunk.length) {
             lastPosition = i;
             break;
           } else {
             lastPosition = i + PACKET_LENGTH;
             this.outputController.enqueue(chunk.slice(i, i + PACKET_LENGTH));
+            i += PACKET_LENGTH - 1;
           }
         }
       }
 
       if (lastPosition != null) {
         this.restBytes = chunk.slice(lastPosition);
+      } else {
+        this.restBytes = Uint8Array.from([]);
       }
 
       this.pump();

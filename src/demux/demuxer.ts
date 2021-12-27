@@ -44,6 +44,7 @@ export default class Demuxer {
   private VideoDecoder: PESDecoder | null = null; // H264
   private SoundDecoder: PESDecoder | null = null; // AAC
   private ID3Decoder: PESDecoder | null = null; // TIMED-ID3
+  private ARIBCaptionDecoder: PESDecoder | null = null; // ARIB-CAPTION
   private MPEG2Decoder: PESDecoder | null = null; // MPEG2
 
   private PCR_PID: number | null = null;
@@ -126,12 +127,27 @@ export default class Demuxer {
 
             if (stream_type === StreamType.AVC1 && this.VideoDecoder == null) {
               this.VideoDecoder = new PESDecoder(elementary_PID);
-            } else if(stream_type === StreamType.AAC && this.SoundDecoder == null) {
+            } else if (stream_type === StreamType.AAC && this.SoundDecoder == null) {
               this.SoundDecoder = new PESDecoder(elementary_PID);
-            } else if(stream_type === StreamType.ID3 && this.ID3Decoder == null) {
+            } else if (stream_type === StreamType.ID3 && this.ID3Decoder == null) {
               this.ID3Decoder = new PESDecoder(elementary_PID);
-            } else if(stream_type === StreamType.MPEG2 && this.MPEG2Decoder == null) {
+            } else if (stream_type === StreamType.MPEG2 && this.MPEG2Decoder == null) {
               this.MPEG2Decoder = new PESDecoder(elementary_PID);
+            } else if (stream_type === StreamType.PRIVATE_DATA) {
+              for (let descriptor = offset + 5; descriptor < offset + 5 + ES_info_length; ) {
+                const descriptor_tag = PMT[descriptor + 0];
+                const descriptor_length = PMT[descriptor + 1];
+
+                if (descriptor_tag === 0x52) {
+                  const component_tag = PMT[descriptor + 2];
+
+                  if (0x30 <= component_tag && component_tag <= 0x37 && this.ARIBCaptionDecoder == null) {
+                    this.ARIBCaptionDecoder = new PESDecoder(elementary_PID);
+                  }
+                }
+
+                descriptor += 2 + descriptor_length;
+              }
             }
 
             offset += 5 + ES_info_length;
@@ -195,6 +211,25 @@ export default class Demuxer {
             pts: id3_pts,
             timestamp: id3_elapsed_seconds,
             data: PES_packet_data(id3)
+          });
+        }
+      } else if(packet_pid === this.ARIBCaptionDecoder?.getPid()) {
+        const result = this.ARIBCaptionDecoder!.add(packet);
+        for (let i = 0; result && i < result.length; i++){
+          const arib_caption = result[i];
+
+          if (this.initPTS == null) { continue; }
+          if (!has_pts(arib_caption)) { continue; }
+
+          const arib_caption_pts: number = pts(arib_caption)!;
+          const arib_caption_elapsed_seconds: number = ((arib_caption_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+
+          this.emitter.emit(EventTypes.ARIB_CAPTION_PARSED, {
+            event: EventTypes.ARIB_CAPTION_PARSED,
+            initPTS: this.initPTS,
+            pts: arib_caption_pts,
+            timestamp: arib_caption_elapsed_seconds,
+            data: PES_packet_data(arib_caption)
           });
         }
       } else if(packet_pid === this.MPEG2Decoder?.getPid()) {

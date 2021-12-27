@@ -62,7 +62,7 @@ export default class PESDecoder {
 
       if (this.chunks.expect() !== 0) {
         if (this.chunks.isFull()) {   
-          if (result == null) { result = []; }     
+          if (result == null) { result = []; }
           result.push(this.chunks.concat());
           this.chunks = null;
         } else if (this.chunks.isOver()) {

@@ -2,6 +2,7 @@ export const EventTypes = {
   H264_PARSED: 'H264_PARSED',
   AAC_PARSED: 'AAC_PARSED',
   ID3_PARSED: 'ID3_PARSED',
+  ARIB_CAPTION_PARSED: 'ARIB_CAPTION_PARSED',
   MPEG2VIDEO_PARSED: 'MPEG2VIDEO_PARSED',
 
   H264_EMITTED: 'H264_EMITTED',
@@ -38,6 +39,14 @@ export type AAC_PARSED_PAYLOAD = {
 
 export type ID3_PARSED_PAYLOAD = {
   event: typeof EventTypes.ID3_PARSED;
+  initPTS: number;
+  pts: number;
+  timestamp: number;
+  data: Uint8Array;
+};
+
+export type ARIB_CAPITON_PARSED_PAYLOAD = {
+  event: typeof EventTypes.ARIB_CAPTION_PARSED;
   initPTS: number;
   pts: number;
   timestamp: number;
@@ -114,6 +123,7 @@ export type Events = {
   [EventTypes.H264_PARSED]: H264_PARSED_PAYLOAD,
   [EventTypes.AAC_PARSED]: AAC_PARSED_PAYLOAD,
   [EventTypes.ID3_PARSED]: ID3_PARSED_PAYLOAD,
+  [EventTypes.ARIB_CAPTION_PARSED]: ARIB_CAPITON_PARSED_PAYLOAD,
   [EventTypes.MPEG2VIDEO_PARSED]: MPEG2VIDEO_PARSED_PAYLOAD,
 
   [EventTypes.H264_EMITTED]: H264_EMITTED_PAYLOAD,
