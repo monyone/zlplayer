@@ -12,26 +12,29 @@ import WorkerDecoder from '../decoder/worker-decoder';
 
 import { EventTypes as TickerEventTypes } from '../ticker/ticker-events'
 import Ticker from 'worker-loader?inline=no-fallback!../ticker/ticker.worker'
+import { TickBasedThrottling } from '../index';
 
 type PlayerOptions = {
-  source?: Source,
+  source?: Source;
   bufferingStrategy?: BufferingStrategy;
-  decoder?: Decoder
+  decoder?: Decoder;
+
+  useBackGroundAudioOnlyVideo?: boolean
 }
 
 export default class Player {  
   private emitter: EventEmitter;
-  private option: PlayerOptions;
+  private options: Required<PlayerOptions>;
 
   private source: Source; 
   private chunker: PacketChunker | null = null;
   private demuxer: Demuxer | null = null;
   private buffering: BufferingStrategy;
   private decoder: Decoder;
-  private ticker: Ticker;
 
   private media: HTMLMediaElement | null = null;
   private audio: HTMLMediaElement | null = null;
+  private ticker: Ticker | null = null;
   private videoTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
   private audioTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
 
@@ -42,34 +45,42 @@ export default class Player {
     return window.isSecureContext && !!(window.VideoFrame) && !!(window.AudioData) && !!(window.VideoDecoder) && !!(window.AudioDecoder) && !!(window.EncodedVideoChunk) && !!(window.EncodedAudioChunk);
   }
   
-  public constructor(option?: PlayerOptions) {
+  public constructor(options?: PlayerOptions) {
     this.emitter = new EventEmitter();
-    this.option = option ?? {};
+    this.options = {
+      source: options?.source ?? new HTTPStreamingWorkerSource(),
+      bufferingStrategy: options?.bufferingStrategy ?? new TickBasedThrottling(),
+      decoder: options?.decoder ?? new WorkerDecoder(),
 
-    this.source = this.option.source ?? new HTTPStreamingWorkerSource();
-    this.buffering = this.option.bufferingStrategy ?? new PassThrough();
+      useBackGroundAudioOnlyVideo: options?.useBackGroundAudioOnlyVideo ?? false
+    };
+
+    this.source = this.options.source;
+    this.buffering = this.options.bufferingStrategy;
     this.buffering.setEmitter(this.emitter);
-    this.decoder = this.option.decoder ?? new WorkerDecoder();
+    this.decoder = this.options.decoder; 
     this.decoder.setEmitter(this.emitter);
-    this.ticker = new Ticker();
 
     this.emitter.on(EventTypes.VIDEO_FRAME_DECODED, this.onVideoFrameDecodedHandler);
     this.emitter.on(EventTypes.AUDIO_FRAME_DECODED, this.onAudioFrameDecodedHandler);
 
-    this.ticker.onmessage = (message) => {
-      const { event } = message.data;
+    if (this.options.useBackGroundAudioOnlyVideo) {
+      this.ticker = new Ticker();
+      this.ticker.onmessage = (message) => {
+        const { event } = message.data;
 
-      switch(event) {
-        case TickerEventTypes.TICKER_TICK: {
-          if (this.audio == null) { return; }
-          this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_TICK, {
-            event: EventTypes.AUDIO_TIMESTAMP_TICK,
-            timestamp: this.audio.currentTime
-          });
-          break;
+        switch(event) {
+          case TickerEventTypes.TICKER_TICK: {
+            if (this.audio == null) { return; }
+            this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_TICK, {
+              event: EventTypes.AUDIO_TIMESTAMP_TICK,
+              timestamp: this.audio.currentTime
+            });
+            break;
+          }
         }
-      }
-    };
+      };
+    }
   }
 
   public async load(url: string): Promise<boolean> {
@@ -86,11 +97,15 @@ export default class Player {
   
   public attachMedia(media: HTMLMediaElement): void {
     this.media = media;
-    if (this.audio == null) {
-      this.audio = document.createElement('video');
+    if (this.options.useBackGroundAudioOnlyVideo) {
+      if (this.audio == null) {
+        this.audio = document.createElement('video');
+        this.audio.muted = true;
+      }
+    } else {
+      this.audio = null;
     }
     this.unload();
-    this.audio.muted = true;
 
     const videoTrackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
     const audioTrackGenerator = new MediaStreamTrackGenerator({ kind: 'audio' });
@@ -102,27 +117,33 @@ export default class Player {
     mediaStream.addTrack(audioTrackGenerator);
     this.media.srcObject = mediaStream;
 
-    const audioStream = new MediaStream();
-    audioStream.addTrack(audioTrackGenerator);
-    this.audio.srcObject = audioStream;
-
-    try {
-      this.audio.play();
-      this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_ENABLED, {
-        event: EventTypes.AUDIO_TIMESTAMP_ENABLED
-      });
-      this.ticker.postMessage({
-        event: TickerEventTypes.TICKER_START,
-        time: 1000 / 60,
-      });
-    } catch(e: unknown) {
-      this.audio = null;
+    if (this.audio == null) {
       this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_DISABLED, {
         event: EventTypes.AUDIO_TIMESTAMP_DISABLED
       });
-      this.ticker.postMessage({
-        event: TickerEventTypes.TICKER_STOP
-      });
+    } else {
+      const audioStream = new MediaStream();
+      audioStream.addTrack(audioTrackGenerator);
+      this.audio.srcObject = audioStream;
+
+      try {
+        this.audio.play();
+        this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_ENABLED, {
+          event: EventTypes.AUDIO_TIMESTAMP_ENABLED
+        });
+        this.ticker?.postMessage({
+          event: TickerEventTypes.TICKER_START,
+          time: 1000 / 60,
+        });
+      } catch(e: unknown) {
+        this.audio = null;
+        this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_DISABLED, {
+          event: EventTypes.AUDIO_TIMESTAMP_DISABLED
+        });
+        this.ticker?.postMessage({
+          event: TickerEventTypes.TICKER_STOP
+        });
+      }
     }
   }
 
