@@ -36,12 +36,12 @@ export default class PESDecoder {
       }
 
       const offset = HEADER_LENGTH + (has_adaptation_field(packet) ? 1 : 0) + adaptation_field_length(packet);
-      const length: number = this.chunks?.expect() ?? (PES_packet_length(packet.slice(offset)) === 0 ? 0 : PES_packet_length(packet.slice(offset)) + 6);
+      const length: number = this.chunks?.expect() ?? ((PES_packet_length(packet.slice(offset)) === 0 ? 0 : PES_packet_length(packet.slice(offset)) + 6));
 
       if (this.chunks == null) {
         this.chunks = new Chunks(length);
       }
-      const rest: number = length === 0 ? Number.POSITIVE_INFINITY : length - this.chunks.length();
+      const rest: number = (length === 0 ? Number.POSITIVE_INFINITY : length) - this.chunks.length();
 
       this.chunks.push(packet.slice(offset, Math.min(offset + rest, PACKET_LENGTH)));
 

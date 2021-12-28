@@ -19,6 +19,8 @@ import {
 import { 
   has_pts,
   pts,
+  has_dts,
+  dts,
   PES_packet_data,
 } from "../mpegts/pes";
 
@@ -49,12 +51,11 @@ export default class Demuxer {
 
   private PCR_PID: number | null = null;
   private initPTS: number | null = null;
-  private isFirstAAC: boolean;;
+  private isFirstAAC: boolean = true;
 
   public constructor (reader: ReadableStream<Uint8Array>, emitter: EventEmitter) {
     this.inputReader = reader.getReader();
     this.emitter = emitter;
-    this.isFirstAAC = true;
     this.pump();
   }
 
@@ -152,7 +153,7 @@ export default class Demuxer {
 
             offset += 5 + ES_info_length;
           }
-        } 
+        }
       } else if(packet_pid === this.VideoDecoder?.getPid()) {
         const result = this.VideoDecoder!.add(packet);
         for (let i = 0; result && i < result.length; i++){
@@ -162,13 +163,17 @@ export default class Demuxer {
           if (!has_pts(video)) { continue; }
 
           const video_pts: number = pts(video)!;
-          const video_elapsed_seconds: number = ((video_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const video_dts: number = has_dts(video) ? dts(video)! : video_pts;
+          const video_pts_elapsed_seconds: number = ((video_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const video_dts_elapsed_seconds: number = ((video_dts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
 
           this.emitter.emit(EventTypes.H264_PARSED, {
             event: EventTypes.H264_PARSED,
             initPTS: this.initPTS,
             pts: video_pts,
-            timestamp: video_elapsed_seconds,
+            dts: video_dts,
+            pts_timestamp: video_pts_elapsed_seconds,
+            dts_timestamp: video_dts_elapsed_seconds,
             data: PES_packet_data(video),
             has_IDR: has_IDR(video)
           });
@@ -182,13 +187,17 @@ export default class Demuxer {
           if (!has_pts(sound)) { continue; }
 
           const sound_pts: number = pts(sound)!;
-          const sound_elapsed_seconds: number = ((sound_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const sound_dts: number = has_dts(sound) ? dts(sound)! : sound_pts;
+          const sound_pts_elapsed_seconds: number = ((sound_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const sound_dts_elapsed_seconds: number = ((sound_dts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
 
           this.emitter.emit(EventTypes.AAC_PARSED, {
             event: EventTypes.AAC_PARSED,
             initPTS: this.initPTS,
             pts: sound_pts,
-            timestamp: this.isFirstAAC ? 0 : sound_elapsed_seconds,
+            dts: sound_dts,
+            pts_timestamp: this.isFirstAAC ? 0 : sound_pts_elapsed_seconds,
+            dts_timestamp: this.isFirstAAC ? 0 : sound_dts_elapsed_seconds,
             data: PES_packet_data(sound)
           });
 
@@ -203,13 +212,17 @@ export default class Demuxer {
           if (!has_pts(id3)) { continue; }
 
           const id3_pts: number = pts(id3)!;
-          const id3_elapsed_seconds: number = ((id3_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const id3_dts: number = has_dts(id3) ? dts(id3)! : id3_pts;
+          const id3_pts_elapsed_seconds: number = ((id3_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const id3_dts_elapsed_seconds: number = ((id3_dts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
 
           this.emitter.emit(EventTypes.ID3_PARSED, {
             event: EventTypes.ID3_PARSED,
             initPTS: this.initPTS,
             pts: id3_pts,
-            timestamp: id3_elapsed_seconds,
+            dts: id3_dts,
+            pts_timestamp: id3_pts_elapsed_seconds,
+            dts_timestamp: id3_dts_elapsed_seconds,
             data: PES_packet_data(id3)
           });
         }
@@ -222,13 +235,17 @@ export default class Demuxer {
           if (!has_pts(arib_caption)) { continue; }
 
           const arib_caption_pts: number = pts(arib_caption)!;
-          const arib_caption_elapsed_seconds: number = ((arib_caption_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const arib_caption_dts: number = has_dts(arib_caption) ? dts(arib_caption) : arib_caption_pts;
+          const arib_caption_pts_elapsed_seconds: number = ((arib_caption_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const arib_caption_dts_elapsed_seconds: number = ((arib_caption_dts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
 
           this.emitter.emit(EventTypes.ARIB_CAPTION_PARSED, {
             event: EventTypes.ARIB_CAPTION_PARSED,
             initPTS: this.initPTS,
             pts: arib_caption_pts,
-            timestamp: arib_caption_elapsed_seconds,
+            dts: arib_caption_dts,
+            pts_timestamp: arib_caption_pts_elapsed_seconds,
+            dts_timestamp: arib_caption_dts_elapsed_seconds,
             data: PES_packet_data(arib_caption)
           });
         }
@@ -241,12 +258,17 @@ export default class Demuxer {
           if (!has_pts(mpeg2)) { continue; }
           
           const mpeg2_pts: number = pts(mpeg2)!;
-          const mpeg2_elapsed_seconds: number = ((mpeg2_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const mpeg2_dts: number = has_dts(mpeg2) ? dts(mpeg2) : mpeg2_pts;
+          const mpeg2_pts_elapsed_seconds: number = ((mpeg2_pts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+          const mpeg2_dts_elapsed_seconds: number = ((mpeg2_dts - this.initPTS + PCR_CYCLES) % PCR_CYCLES) / HZ;
+
           this.emitter.emit(EventTypes.MPEG2VIDEO_PARSED, {
             event: EventTypes.MPEG2VIDEO_PARSED,
             initPTS: this.initPTS,
             pts: mpeg2_pts,
-            timestamp: mpeg2_elapsed_seconds,
+            dts: mpeg2_dts,
+            pts_timestamp: mpeg2_pts_elapsed_seconds,
+            dts_timestamp: mpeg2_dts_elapsed_seconds,
             data: PES_packet_data(mpeg2)
           });
         }

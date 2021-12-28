@@ -21,7 +21,7 @@ export const has_adaptation_field = (packet: Uint8Array): boolean => {
   return (packet[3] & 0x20) !== 0
 };
 export const has_payload = (packet: Uint8Array): boolean => {
-  return (packet[3] & 0x10) != 0
+  return (packet[3] & 0x10) !== 0
 };
 export const adaptation_field_length = (packet: Uint8Array): number => {
   if (has_adaptation_field(packet)) {

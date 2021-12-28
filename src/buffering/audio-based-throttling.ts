@@ -3,13 +3,14 @@ import { Events, EventTypes } from '../event/events';
 import BufferingStrategy from "./buffering-strategy";
 
 type AudioBasedThrottlingOptions = {
-  delay?: number
+  delay?: number,
+  emitFirstFrameOnly?: boolean
 };
 
 export default class AudioBasedThrottling extends BufferingStrategy{
   private emitter: EventEmitter | null = null;
   private bufferingEnabled: boolean = true;
-  private delay: number = 0;
+  private options: Required<AudioBasedThrottlingOptions>;
 
   private readonly onH264ParsedHandler = this.onH264Parsed.bind(this);
   private readonly onAACParsedHandler = this.onAACParsed.bind(this);
@@ -27,7 +28,10 @@ export default class AudioBasedThrottling extends BufferingStrategy{
 
   public constructor(options?: AudioBasedThrottlingOptions) {
     super();
-    this.delay = Math.max(options?.delay ?? 0, 0);
+    this.options = {
+      delay: Math.max(options?.delay ?? 0, 0),
+      emitFirstFrameOnly: options?.emitFirstFrameOnly ?? false
+    }
   }
 
   public setEmitter(emitter: EventEmitter) {
@@ -66,7 +70,7 @@ export default class AudioBasedThrottling extends BufferingStrategy{
   }
 
   private onAACParsed(payload: Events[typeof EventTypes.AAC_PARSED]) {
-    if (this.delay === 0){
+    if (this.options.delay === 0){
       this.emitter?.emit(EventTypes.AAC_EMITTED, { ... payload, event: EventTypes.AAC_EMITTED });
     } else {
       setTimeout(() => {
@@ -74,7 +78,7 @@ export default class AudioBasedThrottling extends BufferingStrategy{
           ... payload,
           event: EventTypes.AAC_EMITTED
         });
-      }, this.delay);
+      }, this.options.delay);
     }
   }
   
@@ -90,25 +94,37 @@ export default class AudioBasedThrottling extends BufferingStrategy{
   }
 
   private onAudioTimestampTick(payload: Events[typeof EventTypes.AUDIO_TIMESTAMP_TICK]) {
+    let h264Emitted = false;
     this.h264Queue = this.h264Queue.filter((h264) => {
-      if (payload.timestamp >= h264.timestamp) {
-        this.emitter?.emit(EventTypes.H264_EMITTED, {
-          ... h264,
-          event: EventTypes.H264_EMITTED
-        });
-        return false;
+      if (payload.timestamp >= h264.dts_timestamp) {
+        if (!this.options.emitFirstFrameOnly || !h264Emitted) {
+          this.emitter?.emit(EventTypes.H264_EMITTED, {
+            ... h264,
+            event: EventTypes.H264_EMITTED
+          });
+          h264Emitted = false;
+          return false;
+        } else {
+          return true;
+        }
       } else {
         return true;
       }
     });
 
+    let mpeg2Emitted = false;
     this.mpeg2videoQueue = this.mpeg2videoQueue.filter((mpeg2video) => {
-      if (payload.timestamp >= mpeg2video.timestamp) {
-        this.emitter?.emit(EventTypes.MPEG2VIDEO_EMITTED, {
-          ... mpeg2video,
-          event: EventTypes.MPEG2VIDEO_EMITTED
-        });
-        return false;
+      if (payload.timestamp >= mpeg2video.dts_timestamp) {
+        if (!this.options.emitFirstFrameOnly || !mpeg2Emitted) {
+          this.emitter?.emit(EventTypes.MPEG2VIDEO_EMITTED, {
+            ... mpeg2video,
+            event: EventTypes.MPEG2VIDEO_EMITTED
+          });
+          mpeg2Emitted = true;
+          return false;
+        } else {
+          return true;
+        }
       } else {
         return true;
       }

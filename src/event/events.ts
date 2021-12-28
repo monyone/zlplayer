@@ -24,7 +24,9 @@ export type H264_PARSED_PAYLOAD = {
   event: typeof EventTypes.H264_PARSED;
   initPTS: number;
   pts: number;
-  timestamp: number;
+  dts: number;
+  pts_timestamp: number;
+  dts_timestamp: number;
   data: Uint8Array;
   has_IDR: boolean;
 };
@@ -33,7 +35,9 @@ export type AAC_PARSED_PAYLOAD = {
   event: typeof EventTypes.AAC_PARSED;
   initPTS: number;
   pts: number;
-  timestamp: number;
+  dts: number;
+  pts_timestamp: number;
+  dts_timestamp: number;
   data: Uint8Array;
 };
 
@@ -41,7 +45,9 @@ export type ID3_PARSED_PAYLOAD = {
   event: typeof EventTypes.ID3_PARSED;
   initPTS: number;
   pts: number;
-  timestamp: number;
+  dts: number;
+  pts_timestamp: number;
+  dts_timestamp: number;
   data: Uint8Array;
 };
 
@@ -49,7 +55,9 @@ export type ARIB_CAPITON_PARSED_PAYLOAD = {
   event: typeof EventTypes.ARIB_CAPTION_PARSED;
   initPTS: number;
   pts: number;
-  timestamp: number;
+  dts: number;
+  pts_timestamp: number;
+  dts_timestamp: number;
   data: Uint8Array;
 };
 
@@ -57,7 +65,9 @@ export type MPEG2VIDEO_PARSED_PAYLOAD = {
   event: typeof EventTypes.MPEG2VIDEO_PARSED;
   initPTS: number;
   pts: number;
-  timestamp: number;
+  dts: number;
+  pts_timestamp: number;
+  dts_timestamp: number;
   data: Uint8Array;
 }
 
@@ -65,7 +75,9 @@ export type H264_EMITTED_PAYLOAD = {
   event: typeof EventTypes.H264_EMITTED;
   initPTS: number;
   pts: number;
-  timestamp: number;
+  dts: number;
+  pts_timestamp: number;
+  dts_timestamp: number;
   data: Uint8Array;
   has_IDR: boolean;
 };
@@ -74,7 +86,9 @@ export type AAC_EMITTED_PAYLOAD = {
   event: typeof EventTypes.AAC_EMITTED;
   initPTS: number;
   pts: number;
-  timestamp: number;
+  dts: number;
+  pts_timestamp: number;
+  dts_timestamp: number;
   data: Uint8Array;
 };
 
@@ -82,7 +96,9 @@ export type MPEG2VIDEO_EMITTED_PAYLOAD = {
   event: typeof EventTypes.MPEG2VIDEO_EMITTED;
   initPTS: number;
   pts: number;
-  timestamp: number;
+  dts: number;
+  pts_timestamp: number;
+  dts_timestamp: number;
   data: Uint8Array;
 }
 

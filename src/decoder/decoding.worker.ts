@@ -54,14 +54,14 @@ self.onmessage = async ({ data }) => {
   const { event } = data;
   switch(event) {
     case EventTypes.H264_EMITTED: {
-      const { timestamp, data: rawData, has_IDR } = data;
+      const { pts_timestamp, data: rawData, has_IDR } = data;
       
       videoKeyFrameArrived ||= has_IDR;
       if (!videoKeyFrameArrived) { return; }
   
       const encodedVideoChunk = new EncodedVideoChunk({
         type: has_IDR ? 'key' : 'delta',
-        timestamp: timestamp * 1000000,
+        timestamp: pts_timestamp * 1000000,
         data: rawData,
       });
   
@@ -77,11 +77,11 @@ self.onmessage = async ({ data }) => {
       break;
     }
     case EventTypes.AAC_EMITTED: {
-      const { timestamp, data: rawData } = data;
+      const { pts_timestamp, data: rawData } = data;
     
       const encodedAudioChunk = new EncodedAudioChunk({
         type: 'key',
-        timestamp: timestamp * 1000000,
+        timestamp: pts_timestamp * 1000000,
         data: rawData,
       });
 
