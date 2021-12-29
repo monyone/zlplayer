@@ -11,6 +11,7 @@ export default class AudioBasedThrottling extends BufferingStrategy{
   private emitter: EventEmitter | null = null;
   private bufferingEnabled: boolean = true;
   private options: Required<AudioBasedThrottlingOptions>;
+  private firstAACFrame: boolean = true;
 
   private readonly onH264ParsedHandler = this.onH264Parsed.bind(this);
   private readonly onAACParsedHandler = this.onAACParsed.bind(this);
@@ -70,6 +71,9 @@ export default class AudioBasedThrottling extends BufferingStrategy{
   }
 
   private onAACParsed(payload: Events[typeof EventTypes.AAC_PARSED]) {
+    if (!this.firstAACFrame) { return; }
+    this.firstAACFrame = false;
+
     if (this.options.delay === 0){
       this.emitter?.emit(EventTypes.AAC_EMITTED, { ... payload, event: EventTypes.AAC_EMITTED });
     } else {

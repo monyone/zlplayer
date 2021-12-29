@@ -7,13 +7,11 @@ import Ticker from 'worker-loader?inline=no-fallback!../ticker/ticker.worker'
 type TickBasedThrottlingOptions = {
   delay?: number;
   emitFirstFrameOnly?: boolean;
-  audioThrottling?: boolean;
   tickHz?: number;
 };
 
 export default class TickBasedThrottling extends BufferingStrategy{
   private emitter: EventEmitter | null = null;
-  private bufferingEnabled: boolean = true;
   private options: Required<TickBasedThrottlingOptions>;
   private ticker: Ticker = new Ticker();
 
@@ -26,8 +24,11 @@ export default class TickBasedThrottling extends BufferingStrategy{
   private aacQueue: Events[typeof EventTypes.AAC_PARSED][] = [];
   private mpeg2videoQueue: Events[typeof EventTypes.MPEG2VIDEO_PARSED][] = [];
 
-  private firstSoundArrived = false;
-  private elapsedTime;
+  private soundBufferingTime: number = 0;
+  private soundDelayTime: number = 0;
+  private soundDelayEmitTimestamp : number | null = null;
+
+  private elapsedTime: number = 0;
   private lastTimestamp : number | null = null;
 
   static isSupported () {
@@ -39,10 +40,9 @@ export default class TickBasedThrottling extends BufferingStrategy{
     this.options = {
       delay: Math.max(options?.delay ?? 0, 0),
       emitFirstFrameOnly: options?.emitFirstFrameOnly ?? false,
-      audioThrottling: options?.audioThrottling ?? true,
       tickHz: options?.tickHz ?? 60
     }
-    this.elapsedTime = -this.options.delay;
+    this.soundDelayTime = this.options.delay;
 
     this.ticker.postMessage({
       event: TickerEventTypes.TICKER_START,
@@ -71,42 +71,78 @@ export default class TickBasedThrottling extends BufferingStrategy{
   }
 
   private onH264Parsed(payload: Events[typeof EventTypes.H264_PARSED]) {
-    if (this.bufferingEnabled) {
-      this.h264Queue.push(payload);
-    } else {
-      this.emitter?.emit(EventTypes.H264_EMITTED, {
-        ... payload,
-        event: EventTypes.H264_EMITTED
-      });
-    }
+    this.h264Queue.push(payload);
   }
 
   private onAACParsed(payload: Events[typeof EventTypes.AAC_PARSED]) {
-    if (!this.firstSoundArrived) {
-      this.firstSoundArrived = true;
+    // if delay not specified
+    if (this.options.delay === 0) {
+      this.emitter?.emit(EventTypes.AAC_EMITTED, {
+        ... payload,
+        event: EventTypes.AAC_EMITTED
+      });
+      this.soundBufferingTime += (1024 / 48000);
+      this.onTick();
+      return;
     }
 
-    if (this.options.audioThrottling) {
-      this.aacQueue.push(payload); 
-    } else {
-      this.emitter?.emit(EventTypes.AAC_EMITTED, { ... payload, event: EventTypes.AAC_EMITTED });
+    // if delay specified
+    this.aacQueue.push(payload);
+    if (this.soundDelayTime > 0) { 
+      const time = (this.aacQueue.length * 1024 / 48000); // TODO: refer ADTS header
+      if (this.soundDelayTime > time) { return; }
+
+      this.soundDelayTime = 0;
     }
+
+    const emit = this.aacQueue.shift()!;
+
+    this.emitter?.emit(EventTypes.AAC_EMITTED, {
+      ... emit,
+      event: EventTypes.AAC_EMITTED
+    });
+    this.soundDelayEmitTimestamp = Date.now();
+    this.soundBufferingTime += (1024 / 48000); // TODO: refer ADTS header
+    this.onTick();
   }
   
   private onMPEG2VideoParsed(payload: Events[typeof EventTypes.MPEG2VIDEO_PARSED]) {
     this.mpeg2videoQueue.push(payload);
   }
 
-  private onTickerTick(message: MessageEvent) {
+  private onTickerTick(message: MessageEvent): void {
     const { event } = message.data;
     if (event !== TickerEventTypes.TICKER_TICK) { return; }
+    if (this.soundDelayTime > 0) { return; }
 
-    if (!this.firstSoundArrived) { return; }
+    this.onTick();
+  }
+
+  private onTick(): void {
+    const now = Date.now();
+
+    // if delay specified
+    if (this.soundDelayEmitTimestamp != null) {
+      const diff = (now - this.soundDelayEmitTimestamp) / 1000;
+      if (this.aacQueue.length >= 1 && diff >= 1024 / 48000) { // TODO: refer ADTS header
+        const emit = this.aacQueue.shift()!;
+
+        this.emitter?.emit(EventTypes.AAC_EMITTED, {
+          ... emit,
+          event: EventTypes.AAC_EMITTED
+        });
+        this.soundBufferingTime += 1024 / 48000; // TODO: refer ADTS header
+        this.soundDelayEmitTimestamp = now;
+      }
+    }
 
     if (this.lastTimestamp != null) {
-      this.elapsedTime += (Date.now() - this.lastTimestamp) / 1000;
+      const diff = Math.min(this.soundBufferingTime, (now - this.lastTimestamp) / 1000);
+      this.elapsedTime += diff;
+      this.soundBufferingTime -= diff;
     }
-    this.lastTimestamp = Date.now();
+    this.lastTimestamp = now;
+    console.log(this.soundBufferingTime, this.aacQueue.length);
 
     let h264Emitted = false;
     this.h264Queue = this.h264Queue.filter((h264) => {
@@ -117,24 +153,6 @@ export default class TickBasedThrottling extends BufferingStrategy{
             event: EventTypes.H264_EMITTED
           });
           h264Emitted = false;
-          return false;
-        } else {
-          return true;
-        }
-      } else {
-        return true;
-      }
-    });
-
-    let aacEmitted = false;
-    this.aacQueue = this.aacQueue.filter((aac) => {
-      if (this.elapsedTime >= aac.dts_timestamp) {
-        if (!this.options.emitFirstFrameOnly || !h264Emitted) {
-          this.emitter?.emit(EventTypes.AAC_EMITTED, {
-            ... aac,
-            event: EventTypes.AAC_EMITTED
-          });
-          aacEmitted = false;
           return false;
         } else {
           return true;
