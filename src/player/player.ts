@@ -10,16 +10,12 @@ import Decoder from '../decoder/decoder';
 import WindowDecoder from '../decoder/window-decoder';
 import WorkerDecoder from '../decoder/worker-decoder';
 
-import { EventTypes as TickerEventTypes } from '../ticker/ticker-events'
-import Ticker from 'worker-loader?inline=no-fallback!../ticker/ticker.worker'
 import { TickBasedThrottling } from '../index';
 
 type PlayerOptions = {
   source?: Source;
   bufferingStrategy?: BufferingStrategy;
   decoder?: Decoder;
-
-  useBackGroundAudioOnlyVideo?: boolean
 }
 
 export default class Player {  
@@ -33,8 +29,6 @@ export default class Player {
   private decoder: Decoder;
 
   private media: HTMLMediaElement | null = null;
-  private audio: HTMLMediaElement | null = null;
-  private ticker: Ticker | null = null;
   private videoTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
   private audioTrackGeneratorWriter: WritableStreamDefaultWriter | null = null;
 
@@ -50,9 +44,7 @@ export default class Player {
     this.options = {
       source: options?.source ?? new HTTPStreamingWorkerSource(),
       bufferingStrategy: options?.bufferingStrategy ?? new TickBasedThrottling(),
-      decoder: options?.decoder ?? new WorkerDecoder(),
-
-      useBackGroundAudioOnlyVideo: options?.useBackGroundAudioOnlyVideo ?? false
+      decoder: options?.decoder ?? new WorkerDecoder()
     };
 
     this.source = this.options.source;
@@ -63,24 +55,6 @@ export default class Player {
 
     this.emitter.on(EventTypes.VIDEO_FRAME_DECODED, this.onVideoFrameDecodedHandler);
     this.emitter.on(EventTypes.AUDIO_FRAME_DECODED, this.onAudioFrameDecodedHandler);
-
-    if (this.options.useBackGroundAudioOnlyVideo) {
-      this.ticker = new Ticker();
-      this.ticker.onmessage = (message) => {
-        const { event } = message.data;
-
-        switch(event) {
-          case TickerEventTypes.TICKER_TICK: {
-            if (this.audio == null) { return; }
-            this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_TICK, {
-              event: EventTypes.AUDIO_TIMESTAMP_TICK,
-              timestamp: this.audio.currentTime
-            });
-            break;
-          }
-        }
-      };
-    }
   }
 
   public async load(url: string): Promise<boolean> {
@@ -97,14 +71,6 @@ export default class Player {
   
   public attachMedia(media: HTMLMediaElement): void {
     this.media = media;
-    if (this.options.useBackGroundAudioOnlyVideo) {
-      if (this.audio == null) {
-        this.audio = document.createElement('video');
-        this.audio.muted = true;
-      }
-    } else {
-      this.audio = null;
-    }
     this.unload();
 
     const videoTrackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
@@ -116,35 +82,6 @@ export default class Player {
     mediaStream.addTrack(videoTrackGenerator);
     mediaStream.addTrack(audioTrackGenerator);
     this.media.srcObject = mediaStream;
-
-    if (this.audio == null) {
-      this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_DISABLED, {
-        event: EventTypes.AUDIO_TIMESTAMP_DISABLED
-      });
-    } else {
-      const audioStream = new MediaStream();
-      audioStream.addTrack(audioTrackGenerator);
-      this.audio.srcObject = audioStream;
-
-      try {
-        this.audio.play();
-        this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_ENABLED, {
-          event: EventTypes.AUDIO_TIMESTAMP_ENABLED
-        });
-        this.ticker?.postMessage({
-          event: TickerEventTypes.TICKER_START,
-          time: 1000 / 60,
-        });
-      } catch(e: unknown) {
-        this.audio = null;
-        this.emitter.emit(EventTypes.AUDIO_TIMESTAMP_DISABLED, {
-          event: EventTypes.AUDIO_TIMESTAMP_DISABLED
-        });
-        this.ticker?.postMessage({
-          event: TickerEventTypes.TICKER_STOP
-        });
-      }
-    }
   }
 
   private abort(): void {
@@ -157,8 +94,6 @@ export default class Player {
   private unload() {
     this.media?.removeAttribute('src');
     this.media?.load();
-    this.audio?.removeAttribute('src');
-    this.audio?.load();
   }
 
   public stop(): void {

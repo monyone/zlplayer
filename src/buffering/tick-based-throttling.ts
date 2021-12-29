@@ -142,7 +142,6 @@ export default class TickBasedThrottling extends BufferingStrategy{
       this.soundBufferingTime -= diff;
     }
     this.lastTimestamp = now;
-    console.log(this.soundBufferingTime, this.aacQueue.length);
 
     let h264Emitted = false;
     this.h264Queue = this.h264Queue.filter((h264) => {
