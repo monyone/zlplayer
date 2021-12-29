@@ -75,7 +75,7 @@ export default class PacketChunker {
         this.restBytes = Uint8Array.from([]);
       }
 
-      this.pump();
+      return this.pump();
     })
   }
 };

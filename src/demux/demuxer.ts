@@ -274,7 +274,7 @@ export default class Demuxer {
         }
       }
       
-      this.pump();
+      return this.pump();
     })
   }
 };

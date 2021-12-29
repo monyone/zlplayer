@@ -83,7 +83,7 @@ export default class HTTPStreamingWindowSource extends Source{
       }
 
       this.outputController.enqueue(value);
-      this.pump();
+      return this.pump();
     })
   }
 };

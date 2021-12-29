@@ -56,6 +56,6 @@ const pump = () => {
     }
 
     self.postMessage({ event: EventTypes.DATA_ARRIVED, data: value })
-    pump();
+    return pump();
   })
 }
