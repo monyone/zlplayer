@@ -2,6 +2,8 @@ export { Events, EventTypes } from './event/events'
 export { default as EventEmitter } from './event/eventemitter'
 
 export { default as Player } from './player/player'
+export { default as PassThroughPlayer } from './player/pass-through-player'
+export { default as WebRTCPlayer } from './player/webrtc-player'
 
 export { default as Source } from './source/source'
 export { default as HTTPStreamingWindowSource } from './source/http-streaming-window-source'

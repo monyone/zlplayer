@@ -31,6 +31,8 @@ self.onmessage = async ({ data }) => {
         self.postMessage({ event: EventTypes.LOAD_SUCCEEDED });
         pump();
       } catch (e: unknown) {
+        self.postMessage({ event: EventTypes.LOAD_FAILED });
+        return;
       }
       break;
     };
