@@ -25,10 +25,12 @@ export default class TickBasedThrottling extends BufferingStrategy{
   private mpeg2videoQueue: Events[typeof EventTypes.MPEG2VIDEO_PARSED][] = [];
 
   private soundBufferingTime: number = 0;
+  private soundStalledTime: number = 0;
+
   private soundDelayTime: number = 0;
   private soundDelayEmitTimestamp : number | null = null;
 
-  private elapsedTime: number = 0;
+  private startTimestamp: number = 0;
   private lastTimestamp : number | null = null;
 
   static isSupported () {
@@ -43,11 +45,6 @@ export default class TickBasedThrottling extends BufferingStrategy{
       tickHz: options?.tickHz ?? 60
     }
     this.soundDelayTime = this.options.delay;
-
-    this.ticker.postMessage({
-      event: TickerEventTypes.TICKER_START,
-      time: 1000 / this.options.tickHz
-    } as TickerEvents[typeof TickerEventTypes.TICKER_START]);
   }
 
   public setEmitter(emitter: EventEmitter) {
@@ -65,9 +62,26 @@ export default class TickBasedThrottling extends BufferingStrategy{
     this.ticker.addEventListener('message', this.onTickerTickHandler);
   }
 
+  public start() {
+    this.abort();
+    this.ticker.postMessage({
+      event: TickerEventTypes.TICKER_START,
+      time: 1000 / this.options.tickHz
+    } as TickerEvents[typeof TickerEventTypes.TICKER_START]);
+    this.startTimestamp = performance.now();
+  }
+
   public abort() {
     this.h264Queue = [];
     this.mpeg2videoQueue = [];
+    this.ticker.postMessage({
+      event: TickerEventTypes.TICKER_STOP
+    } as TickerEvents[typeof TickerEventTypes.TICKER_STOP]);
+  }
+
+  public destroy() {
+    this.abort();
+    this.ticker.terminate();
   }
 
   private onH264Parsed(payload: Events[typeof EventTypes.H264_PARSED]) {
@@ -81,7 +95,7 @@ export default class TickBasedThrottling extends BufferingStrategy{
         ... payload,
         event: EventTypes.AAC_EMITTED
       });
-      this.soundBufferingTime += (1024 / 48000);
+      this.soundBufferingTime += (1024 / 48000); // TODO: refer ADTS header
       this.onTick();
       return;
     }
@@ -101,7 +115,7 @@ export default class TickBasedThrottling extends BufferingStrategy{
       ... emit,
       event: EventTypes.AAC_EMITTED
     });
-    this.soundDelayEmitTimestamp = Date.now();
+    this.soundDelayEmitTimestamp = performance.now();
     this.soundBufferingTime += (1024 / 48000); // TODO: refer ADTS header
     this.onTick();
   }
@@ -119,7 +133,7 @@ export default class TickBasedThrottling extends BufferingStrategy{
   }
 
   private onTick(): void {
-    const now = Date.now();
+    const now = performance.now();
 
     // if delay specified
     if (this.soundDelayEmitTimestamp != null) {
@@ -137,15 +151,23 @@ export default class TickBasedThrottling extends BufferingStrategy{
     }
 
     if (this.lastTimestamp != null) {
-      const diff = Math.min(this.soundBufferingTime, (now - this.lastTimestamp) / 1000);
-      this.elapsedTime += diff;
-      this.soundBufferingTime -= diff;
+      const elapse = (now - this.lastTimestamp) / 1000;
+      const buffer = this.soundBufferingTime;
+
+      if (buffer >= elapse) {
+        this.soundBufferingTime -= elapse;
+      } else {
+        this.soundBufferingTime = 0;
+        this.soundStalledTime += (elapse - buffer);
+      }
     }
     this.lastTimestamp = now;
 
+    const elapsedTime = ((now - this.startTimestamp) / 1000) - this.soundStalledTime;
+
     let h264Emitted = false;
     this.h264Queue = this.h264Queue.filter((h264) => {
-      if (this.elapsedTime >= h264.dts_timestamp) {
+      if (elapsedTime >= h264.dts_timestamp) {
         if (!this.options.emitFirstFrameOnly || !h264Emitted) {
           this.emitter?.emit(EventTypes.H264_EMITTED, {
             ... h264,
@@ -163,7 +185,7 @@ export default class TickBasedThrottling extends BufferingStrategy{
 
     let mpeg2Emitted = false;
     this.mpeg2videoQueue = this.mpeg2videoQueue.filter((mpeg2video) => {
-      if (this.elapsedTime >= mpeg2video.dts_timestamp) {
+      if (elapsedTime >= mpeg2video.dts_timestamp) {
         if (!this.options.emitFirstFrameOnly || !mpeg2Emitted) {
           this.emitter?.emit(EventTypes.MPEG2VIDEO_EMITTED, {
             ... mpeg2video,

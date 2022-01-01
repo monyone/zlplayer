@@ -64,6 +64,7 @@ export default class Player {
 
     this.chunker = new PacketChunker(this.source.getStream());
     this.demuxer = new Demuxer(this.chunker.getStream(), this.emitter);
+    this.buffering.start();
     await this.decoder.init();
 
     return true;

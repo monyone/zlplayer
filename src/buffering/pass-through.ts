@@ -26,7 +26,9 @@ export default class PassThrough extends BufferingStrategy{
     this.emitter.on(EventTypes.MPEG2VIDEO_PARSED, this.onMPEG2VideoParsedHandler);
   }
 
+  public start() {}
   public abort() {}
+  public destroy() {}
 
   private async onH264Parsed(payload: Events[typeof EventTypes.H264_PARSED]) {
     this.emitter?.emit(EventTypes.H264_EMITTED, { ... payload, event: EventTypes.H264_EMITTED });
