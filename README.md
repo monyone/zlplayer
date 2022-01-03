@@ -1,4 +1,4 @@
-# zlplayer [![npm](https://img.shields.io/npm/v/zlplayer.svg?style=flat)](https://www.npmjs.com/package/zlplayer.js)
+# zlplayer [![npm](https://img.shields.io/npm/v/zlplayer.svg?style=flat)](https://www.npmjs.com/package/zlplayer)
 
 HTML5 MPEG2-TS live stream player written in TypeScript.
 
