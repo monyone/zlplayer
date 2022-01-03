@@ -71,7 +71,7 @@ export default class PassThroughPlayer extends Player {
     return true;
   }
   
-  public async attachMedia(media: HTMLMediaElement): Promise<void> {
+  public attachMedia(media: HTMLMediaElement): void {
     this.media = media;
     this.unload();
 
