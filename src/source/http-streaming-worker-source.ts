@@ -35,7 +35,7 @@ export default class HTTPStreamingWorkerSource extends Source{
 
   public abort() {
     try {
-      this.outputStream?.cancel();
+      if (!this.outputStream.locked) this.outputStream?.cancel();
       const global = this;
       this.outputStream = new ReadableStream<Uint8Array>({
         start (controller) {
