@@ -7,6 +7,7 @@ import Ticker from 'worker-loader?inline=no-fallback!../ticker/ticker.worker'
 type TickBasedThrottlingOptions = {
   delay?: number;
   emitFirstFrameOnly?: boolean;
+  hasAudioTrack?: boolean;
   tickHz?: number;
 };
 
@@ -42,6 +43,7 @@ export default class TickBasedThrottling extends BufferingStrategy{
     this.options = {
       delay: Math.max(options?.delay ?? 0, 0),
       emitFirstFrameOnly: options?.emitFirstFrameOnly ?? false,
+      hasAudioTrack: options?.hasAudioTrack ?? true,
       tickHz: options?.tickHz ?? 60
     }
     this.soundDelayTime = this.options.delay;
@@ -136,7 +138,7 @@ export default class TickBasedThrottling extends BufferingStrategy{
     const now = performance.now();
 
     // if delay specified
-    if (this.soundDelayEmitTimestamp != null) {
+    if (this.soundDelayEmitTimestamp != null && this.options.hasAudioTrack) {
       const diff = (now - this.soundDelayEmitTimestamp) / 1000;
       if (this.aacQueue.length >= 1 && diff >= 1024 / 48000) { // TODO: refer ADTS header
         const emit = this.aacQueue.shift()!;
@@ -163,7 +165,7 @@ export default class TickBasedThrottling extends BufferingStrategy{
     }
     this.lastTimestamp = now;
 
-    const elapsedTime = ((now - this.startTimestamp) / 1000) - this.soundStalledTime;
+    const elapsedTime = ((now - this.startTimestamp) / 1000) - (this.options.hasAudioTrack ?  this.soundStalledTime : 0);
 
     let h264Emitted = false;
     this.h264Queue = this.h264Queue.filter((h264) => {
