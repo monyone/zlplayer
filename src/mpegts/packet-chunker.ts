@@ -35,7 +35,7 @@ export default class PacketChunker {
       this.inputReader?.cancel();
     } catch (e: unknown) {}
     try {
-      this.outputStream?.cancel();
+      if (!this.outputStream.locked) this.outputStream?.cancel();
 
       const global = this;
       this.outputStream = new ReadableStream<Uint8Array>({
