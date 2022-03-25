@@ -175,7 +175,7 @@ export default class TickBasedThrottling extends BufferingStrategy{
             ... h264,
             event: EventTypes.H264_EMITTED
           });
-          h264Emitted = false;
+          h264Emitted = true;
           return false;
         } else {
           return true;
