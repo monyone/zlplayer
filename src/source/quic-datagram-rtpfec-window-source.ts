@@ -118,7 +118,7 @@ export default class HTTPStreamingWindowSource extends Source{
     if (!this.has(sequence_number)) { return null; }
 
     const index = (sequence_number - this.baseSN + 2 ** 16) % (2 ** 16);
-    return this.ringBuffer[index];
+    return this.ringBuffer[(this.head + index) % this.length];
   }
 
   private push(payload: Uint8Array, sequence_number: number): (Uint8Array | null)[] {
@@ -158,7 +158,7 @@ export default class HTTPStreamingWindowSource extends Source{
         if (this.baseSN == null) {
           this.baseSN = sequence_number;
         }
-        
+
         const emits = this.push(rtp_payload, sequence_number);
         for (const packet of emits) {
           if (packet === null) { // DROP
