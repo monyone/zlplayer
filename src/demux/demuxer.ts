@@ -60,7 +60,7 @@ export default class Demuxer {
   }
 
   static isSupported () {
-    return !!(self.ReadableStream) && !!(self.EventTarget);
+    return !!(self.ReadableStream);
   }
 
   public abort() {
