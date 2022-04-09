@@ -42,7 +42,7 @@ export default class HTTPStreamingWindowSource extends Source{
  
   public constructor (length: number) {
     super();
-    this.length = length;
+    this.length = Math.max(length, 2);
     for (let i = 0; i < this.length; i++){ this.ringBuffer.push(null); }
 
     const global = this;
