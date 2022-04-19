@@ -42,7 +42,7 @@ export default class HTTPStreamingWindowSource extends Source{
     } catch (e: unknown) {}
   }
 
-  public async load(url: string): Promise<boolean> {
+  public async load(url: string, fetchOptions = {}): Promise<boolean> {
     this.abort();
 
     if (self.AbortController) {
@@ -51,7 +51,8 @@ export default class HTTPStreamingWindowSource extends Source{
 
     try {
       const result = await fetch(url, {
-        signal: this.abortController?.signal
+        signal: this.abortController?.signal,
+        ...fetchOptions
       });
 
       if (!(result.ok && 200 <= result.status && result.status < 300)) {
