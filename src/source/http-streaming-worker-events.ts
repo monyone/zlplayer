@@ -9,7 +9,7 @@ export const EventTypes = {
 export type LOAD_REQUEST_PAYLOAD = {
   event: typeof EventTypes.LOAD_REQUEST,
   url: string,
-  fetchOptions: unknown
+  fetchOptions: RequestInit
 }
 
 export type LOAD_SUCCEEDED_PAYLOAD = {

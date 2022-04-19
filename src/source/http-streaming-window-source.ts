@@ -42,7 +42,7 @@ export default class HTTPStreamingWindowSource extends Source{
     } catch (e: unknown) {}
   }
 
-  public async load(url: string, fetchOptions = {}): Promise<boolean> {
+  public async load(url: string, fetchOptions: RequestInit = {}): Promise<boolean> {
     this.abort();
 
     if (self.AbortController) {

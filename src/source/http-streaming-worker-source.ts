@@ -49,7 +49,7 @@ export default class HTTPStreamingWorkerSource extends Source{
     this.worker.postMessage({event: EventTypes.LOAD_ABORTED});
   }
 
-  public async load(url: string, fetchOptions = {}): Promise<boolean> {
+  public async load(url: string, fetchOptions: RequestInit = {}): Promise<boolean> {
     this.abort();
     return new Promise((resolve: (arg0: boolean) => void) => {
       const request_handler = (message: MessageEvent) => {
