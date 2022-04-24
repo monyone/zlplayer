@@ -1,4 +1,4 @@
-import Source from "./source";
+import Source, { LoadOption } from "./source";
 import Worker from "worker-loader?inline=no-fallback!./http-streaming.worker"
 
 import { EventTypes } from './http-streaming-worker-events'
@@ -49,7 +49,7 @@ export default class HTTPStreamingWorkerSource extends Source{
     this.worker.postMessage({event: EventTypes.LOAD_ABORTED});
   }
 
-  public async load(url: string, fetchOptions: RequestInit = {}): Promise<boolean> {
+  public async load(url: string, options?: LoadOption): Promise<boolean> {
     this.abort();
     return new Promise((resolve: (arg0: boolean) => void) => {
       const request_handler = (message: MessageEvent) => {
@@ -72,7 +72,7 @@ export default class HTTPStreamingWorkerSource extends Source{
       this.worker.postMessage({
         event: EventTypes.LOAD_REQUEST,
         url,
-        fetchOptions
+        options
       });  
     })
   }

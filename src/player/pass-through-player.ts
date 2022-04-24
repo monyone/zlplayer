@@ -7,7 +7,7 @@ import { Events, EventTypes } from '../event/events';
 import PacketChunker from '../mpegts/packet-chunker';
 import BufferingStrategy from '../buffering/buffering-strategy';
 import TickBasedThrottling from '../buffering/tick-based-throttling';
-import Source from '../source/source';
+import Source, { LoadOption } from '../source/source';
 import Decoder from '../decoder/decoder';
 import WorkerDecoder from '../decoder/worker-decoder';
 
@@ -58,8 +58,8 @@ export default class PassThroughPlayer extends Player {
     this.emitter.on(EventTypes.AUDIO_FRAME_DECODED, this.onAudioFrameDecodedHandler);
   }
 
-  public async load(url: string): Promise<boolean> {
-    if (!(await this.source.load(url))) {
+  public async load(url: string, options?: LoadOption): Promise<boolean> {
+    if (!(await this.source.load(url, options))) {
       return false;
     }
 

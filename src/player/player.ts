@@ -1,6 +1,8 @@
 import { Events } from '../event/events';
+import { LoadOption } from '../source/source'
+
 export default abstract class Player {
-  public abstract load(url: string): Promise<boolean>;
+  public abstract load(url: string, options?: LoadOption): Promise<boolean>;
   public abstract attachMedia(media: HTMLMediaElement): void;
   public abstract stop(): void;
 
