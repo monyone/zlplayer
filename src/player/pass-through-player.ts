@@ -76,13 +76,55 @@ export default class PassThroughPlayer extends Player {
     this.unload();
 
     const videoTrackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
-    const audioTrackGenerator = new MediaStreamTrackGenerator({ kind: 'audio' });
+    const audioTrackGeneratorInput = new MediaStreamTrackGenerator({ kind: 'audio' });
+    const audioTrackGeneratorOutput = new MediaStreamTrackGenerator({ kind: 'audio' });
     this.videoTrackGeneratorWriter = videoTrackGenerator.writable.getWriter();
-    this.audioTrackGeneratorWriter = audioTrackGenerator.writable.getWriter();
-    
+    this.audioTrackGeneratorWriter = audioTrackGeneratorInput.writable.getWriter();
+    const trackProcessor = new MediaStreamTrackProcessor({ track: audioTrackGeneratorInput });
+
+    // TODO: audio transformation can be injected via PassThroughPlayerOptions
+    const transformer = new TransformStream({
+      async transform(audioFrame, controller) {
+        const leftChannelBuffer = new ArrayBuffer(audioFrame.numberOfFrames * Float32Array.BYTES_PER_ELEMENT);
+        const leftChannelView = new Float32Array(leftChannelBuffer);
+        const rightChannelBuffer = new ArrayBuffer(audioFrame.numberOfFrames * Float32Array.BYTES_PER_ELEMENT);
+        const rightChannelView = new Float32Array(rightChannelBuffer);
+
+        const newStereoChannelBuffer = new ArrayBuffer(audioFrame.numberOfFrames * Float32Array.BYTES_PER_ELEMENT * 2);
+        const newStereoChannelView = new Float32Array(newStereoChannelBuffer);
+
+        // Todo: make this configurable
+        const leftChannelIndex = 2;
+        const rightChannelIndex = 3;
+
+        audioFrame.copyTo(leftChannelView, {planeIndex: leftChannelIndex}); 
+        audioFrame.copyTo(rightChannelView, {planeIndex: rightChannelIndex});
+
+        for(let i = 0; i < audioFrame.numberOfFrames;  i++) {
+          newStereoChannelView[i] = leftChannelView[i];
+          newStereoChannelView[i*2 + 1] = rightChannelView[i];
+        }
+
+        var newFrame = new AudioData({
+          data: newStereoChannelBuffer,
+          format: audioFrame.format,
+          numberOfChannels: 2,
+          numberOfFrames: audioFrame.numberOfFrames,
+          sampleRate: audioFrame.sampleRate,
+          timestamp: audioFrame.timestamp
+        })
+
+        audioFrame.close();
+        controller.enqueue(newFrame);
+      },
+    });
+
+    trackProcessor.readable.pipeThrough(transformer).pipeTo(audioTrackGeneratorOutput.writable)
+
     const mediaStream = new MediaStream();
     mediaStream.addTrack(videoTrackGenerator);
-    mediaStream.addTrack(audioTrackGenerator);
+    mediaStream.addTrack(audioTrackGeneratorOutput);
+    
     this.media.srcObject = mediaStream;
   }
 
