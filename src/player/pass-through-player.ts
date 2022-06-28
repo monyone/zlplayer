@@ -15,11 +15,12 @@ type PassThroughPlayerOptions = {
   source?: Source;
   bufferingStrategy?: BufferingStrategy;
   decoder?: Decoder;
+  audioTransformer?: Transformer<any, any>
 }
 
 export default class PassThroughPlayer extends Player {  
   private emitter: EventEmitter;
-  private options: Required<PassThroughPlayerOptions>;
+  private options: Required<Omit<PassThroughPlayerOptions, 'audioTransformer'>> & Pick<PassThroughPlayerOptions, 'audioTransformer'>;
 
   private source: Source; 
   private chunker: PacketChunker | null = null;
@@ -45,7 +46,8 @@ export default class PassThroughPlayer extends Player {
     this.options = {
       source: options?.source ?? new HTTPStreamingWorkerSource(),
       bufferingStrategy: options?.bufferingStrategy ?? new TickBasedThrottling(),
-      decoder: options?.decoder ?? new WorkerDecoder()
+      decoder: options?.decoder ?? new WorkerDecoder(),
+      audioTransformer: options?.audioTransformer ?? undefined
     };
 
     this.source = this.options.source;
@@ -75,55 +77,27 @@ export default class PassThroughPlayer extends Player {
     this.media = media;
     this.unload();
 
+    const isAudioTransformerDefined = this.options.audioTransformer != undefined;
+
     const videoTrackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
     const audioTrackGeneratorInput = new MediaStreamTrackGenerator({ kind: 'audio' });
-    const audioTrackGeneratorOutput = new MediaStreamTrackGenerator({ kind: 'audio' });
+    let audioTrackGeneratorOutput = null;
+   
     this.videoTrackGeneratorWriter = videoTrackGenerator.writable.getWriter();
     this.audioTrackGeneratorWriter = audioTrackGeneratorInput.writable.getWriter();
     const trackProcessor = new MediaStreamTrackProcessor({ track: audioTrackGeneratorInput });
 
-    // TODO: audio transformation can be injected via PassThroughPlayerOptions
-    const transformer = new TransformStream({
-      async transform(audioFrame, controller) {
-        const leftChannelBuffer = new ArrayBuffer(audioFrame.numberOfFrames * Float32Array.BYTES_PER_ELEMENT);
-        const leftChannelView = new Float32Array(leftChannelBuffer);
-        const rightChannelBuffer = new ArrayBuffer(audioFrame.numberOfFrames * Float32Array.BYTES_PER_ELEMENT);
-        const rightChannelView = new Float32Array(rightChannelBuffer);
+    if (isAudioTransformerDefined) {
+      audioTrackGeneratorOutput = new MediaStreamTrackGenerator({ kind: 'audio' });
 
-        const newStereoChannelBuffer = new ArrayBuffer(audioFrame.numberOfFrames * Float32Array.BYTES_PER_ELEMENT * 2);
-        const newStereoChannelView = new Float32Array(newStereoChannelBuffer);
+      const transformer = new TransformStream(this.options.audioTransformer);
 
-        // Todo: make this configurable
-        const leftChannelIndex = 2;
-        const rightChannelIndex = 3;
-
-        audioFrame.copyTo(leftChannelView, {planeIndex: leftChannelIndex}); 
-        audioFrame.copyTo(rightChannelView, {planeIndex: rightChannelIndex});
-
-        for(let i = 0; i < audioFrame.numberOfFrames;  i++) {
-          newStereoChannelView[i] = leftChannelView[i];
-          newStereoChannelView[i*2 + 1] = rightChannelView[i];
-        }
-
-        var newFrame = new AudioData({
-          data: newStereoChannelBuffer,
-          format: audioFrame.format,
-          numberOfChannels: 2,
-          numberOfFrames: audioFrame.numberOfFrames,
-          sampleRate: audioFrame.sampleRate,
-          timestamp: audioFrame.timestamp
-        })
-
-        audioFrame.close();
-        controller.enqueue(newFrame);
-      },
-    });
-
-    trackProcessor.readable.pipeThrough(transformer).pipeTo(audioTrackGeneratorOutput.writable)
+      trackProcessor.readable.pipeThrough(transformer).pipeTo(audioTrackGeneratorOutput?.writable);
+    }
 
     const mediaStream = new MediaStream();
     mediaStream.addTrack(videoTrackGenerator);
-    mediaStream.addTrack(audioTrackGeneratorOutput);
+    if (audioTrackGeneratorOutput) mediaStream.addTrack(audioTrackGeneratorOutput);
     
     this.media.srcObject = mediaStream;
   }
