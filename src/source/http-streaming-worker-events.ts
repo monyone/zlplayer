@@ -1,3 +1,5 @@
+import { LoadOption } from "./source";
+
 export const EventTypes = {
   LOAD_REQUEST: 'LOAD_REQUEST',
   LOAD_ABORTED: 'LOAD_ABORTED',
@@ -8,7 +10,8 @@ export const EventTypes = {
 
 export type LOAD_REQUEST_PAYLOAD = {
   event: typeof EventTypes.LOAD_REQUEST,
-  url: string
+  url: string,
+  options?: LoadOption
 }
 
 export type LOAD_SUCCEEDED_PAYLOAD = {

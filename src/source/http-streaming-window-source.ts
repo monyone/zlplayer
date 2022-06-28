@@ -1,4 +1,4 @@
-import Source from "./source";
+import Source, { LoadOption } from "./source";
 
 export default class HTTPStreamingWindowSource extends Source{  
   private fetchReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
@@ -42,7 +42,7 @@ export default class HTTPStreamingWindowSource extends Source{
     } catch (e: unknown) {}
   }
 
-  public async load(url: string): Promise<boolean> {
+  public async load(url: string, options?: LoadOption): Promise<boolean> {
     this.abort();
 
     if (self.AbortController) {
@@ -51,7 +51,8 @@ export default class HTTPStreamingWindowSource extends Source{
 
     try {
       const result = await fetch(url, {
-        signal: this.abortController?.signal
+        signal: this.abortController?.signal,
+        ... options?.fetchOptions
       });
 
       if (!(result.ok && 200 <= result.status && result.status < 300)) {

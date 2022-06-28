@@ -11,6 +11,21 @@ type TickBasedThrottlingOptions = {
   tickHz?: number;
 };
 
+const AAC_SAMPLING_FREQ = new Map<number, number>([
+  [0x00, 96000],
+  [0x01, 88200],
+  [0x02, 64000],
+  [0x03, 48000],
+  [0x04, 44100],
+  [0x05, 32000],
+  [0x06, 24000],
+  [0x07, 22050],
+  [0x08, 16000],
+  [0x09, 12000],
+  [0x0a, 11025],
+  [0x0b, 8000]
+]);
+
 export default class TickBasedThrottling extends BufferingStrategy{
   private emitter: EventEmitter | null = null;
   private options: Required<TickBasedThrottlingOptions>;
@@ -91,13 +106,25 @@ export default class TickBasedThrottling extends BufferingStrategy{
   }
 
   private onAACParsed(payload: Events[typeof EventTypes.AAC_PARSED]) {
+    let bufferingTime = 0;
+    // FIXME: it assume align adts in PES payload
+    for (let index = 0; index < payload.data.byteLength; ) {
+      const data = payload.data;
+      const frequency_index = (data[index + 2] & 0b00111100) >> 2;
+      const frame_length = (((data[index + 3] & 0x03) << 11) | (data[index + 4] << 3) | ((data[index + 5] & 0xE0) >> 5));
+      const frames = (data[index + 6] & 0b00000011);
+
+      bufferingTime += 1024 / (AAC_SAMPLING_FREQ.get(frequency_index) ?? 48000);
+      index += (frame_length + 2 * frames);
+    }
+
     // if delay not specified
     if (this.options.delay === 0) {
       this.emitter?.emit(EventTypes.AAC_EMITTED, {
         ... payload,
         event: EventTypes.AAC_EMITTED
       });
-      this.soundBufferingTime += (1024 / 48000); // TODO: refer ADTS header
+      this.soundBufferingTime += bufferingTime;
       this.onTick();
       return;
     }
@@ -105,20 +132,18 @@ export default class TickBasedThrottling extends BufferingStrategy{
     // if delay specified
     this.aacQueue.push(payload);
     if (this.soundDelayTime > 0) { 
-      const time = (this.aacQueue.length * 1024 / 48000); // TODO: refer ADTS header
-      if (this.soundDelayTime > time) { return; }
-
+      this.soundDelayTime -= bufferingTime;
+      if (this.soundDelayTime > 0) { return; }
       this.soundDelayTime = 0;
     }
 
     const emit = this.aacQueue.shift()!;
-
     this.emitter?.emit(EventTypes.AAC_EMITTED, {
       ... emit,
       event: EventTypes.AAC_EMITTED
     });
     this.soundDelayEmitTimestamp = performance.now();
-    this.soundBufferingTime += (1024 / 48000); // TODO: refer ADTS header
+    this.soundBufferingTime += (1024 / 48000);
     this.onTick();
   }
   

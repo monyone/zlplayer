@@ -6,6 +6,7 @@ export { default as Player } from './player/pass-through-player'
 export { default as Source } from './source/source'
 export { default as HTTPStreamingWindowSource } from './source/http-streaming-window-source'
 export { default as HTTPStreamingWorkerSource } from './source/http-streaming-worker-source'
+export { default as QuicDatagramRTPFecWindowSource } from './source/quic-datagram-rtpfec-window-source'
 
 export { default as BufferingStrategy } from './buffering/buffering-strategy'
 export { default as PassThrough } from './buffering/pass-through'

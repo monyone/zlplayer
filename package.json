@@ -1,6 +1,6 @@
 {
   "name": "zlplayer",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "main": "dist/zlplayer.js",
   "types": "d.ts/index.d.ts",
   "files": [
@@ -12,7 +12,8 @@
   "author": "monyone <monyone.teihen@gmail.com>",
   "description": "An extremely low latency MPEG2-TS player",
   "keywords": [
-    "html5", "mpegts"
+    "html5",
+    "mpegts"
   ],
   "repository": {
     "type": "git",
@@ -25,16 +26,16 @@
     "tsc": "tsc --noEmit"
   },
   "devDependencies": {
-    "@babel/core": "^7.16.5",
-    "@babel/preset-env": "^7.16.5",
-    "@types/dom-mediacapture-transform": "^0.1.2",
-    "@types/dom-webcodecs": "^0.1.3",
-    "babel-loader": "^8.2.3",
-    "core-js": "^3.20.1",
-    "ts-loader": "^9.2.6",
+    "@babel/core": "^7.17.9",
+    "@babel/preset-env": "^7.16.11",
+    "@types/dom-mediacapture-transform": "^0.1.3",
+    "@types/dom-webcodecs": "^0.1.4",
+    "babel-loader": "^8.2.5",
+    "core-js": "^3.22.2",
+    "ts-loader": "^9.2.8",
     "typescript": "^4.5.4",
-    "webpack": "^5.65.0",
-    "webpack-cli": "^4.9.1",
+    "webpack": "^5.72.0",
+    "webpack-cli": "^4.9.2",
     "worker-loader": "^3.0.8"
   }
 }

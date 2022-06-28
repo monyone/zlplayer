@@ -7,14 +7,15 @@ self.onmessage = async ({ data }) => {
   const { event } = data;
   switch (event) {
     case EventTypes.LOAD_REQUEST: {
-      const { url } = data as Events[typeof EventTypes.LOAD_REQUEST]
+      const { url, options } = data as Events[typeof EventTypes.LOAD_REQUEST]
       if (self.AbortController) {
         abortController = new self.AbortController();
       }
 
       try {
         const result = await fetch(url, {
-          signal: abortController?.signal
+          signal: abortController?.signal,
+          ... options?.fetchOptions
         });
   
         if (!(result.ok && 200 <= result.status && result.status < 300)) {
