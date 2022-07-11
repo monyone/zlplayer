@@ -81,13 +81,15 @@ export default class PassThroughPlayer extends Player {
 
     const videoTrackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
     const audioTrackGeneratorInput = new MediaStreamTrackGenerator({ kind: 'audio' });
+    
     let audioTrackGeneratorOutput = null;
    
     this.videoTrackGeneratorWriter = videoTrackGenerator.writable.getWriter();
     this.audioTrackGeneratorWriter = audioTrackGeneratorInput.writable.getWriter();
-    const trackProcessor = new MediaStreamTrackProcessor({ track: audioTrackGeneratorInput });
 
     if (isAudioTransformerDefined) {
+      const trackProcessor = new MediaStreamTrackProcessor({ track: audioTrackGeneratorInput });
+
       audioTrackGeneratorOutput = new MediaStreamTrackGenerator({ kind: 'audio' });
 
       const transformer = new TransformStream(this.options.audioTransformer);
@@ -96,9 +98,12 @@ export default class PassThroughPlayer extends Player {
     }
 
     const mediaStream = new MediaStream();
-    mediaStream.addTrack(videoTrackGenerator);
-    if (audioTrackGeneratorOutput) mediaStream.addTrack(audioTrackGeneratorOutput);
     
+    mediaStream.addTrack(videoTrackGenerator);
+
+    if (audioTrackGeneratorOutput) mediaStream.addTrack(audioTrackGeneratorOutput);
+    else mediaStream.addTrack(audioTrackGeneratorInput);
+
     this.media.srcObject = mediaStream;
   }
 
