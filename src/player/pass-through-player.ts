@@ -92,9 +92,9 @@ export default class PassThroughPlayer extends Player {
 
       audioTrackGeneratorOutput = new MediaStreamTrackGenerator({ kind: 'audio' });
 
-      const transformer = new TransformStream(this.options.audioTransformer);
+      const transformStream = new TransformStream(this.options.audioTransformer);
 
-      trackProcessor.readable.pipeThrough(transformer).pipeTo(audioTrackGeneratorOutput?.writable);
+      trackProcessor.readable.pipeThrough(transformStream).pipeTo(audioTrackGeneratorOutput?.writable);
     }
 
     const mediaStream = new MediaStream();
