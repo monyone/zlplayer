@@ -47,7 +47,7 @@ export default class PassThroughPlayer extends Player {
       source: options?.source ?? new HTTPStreamingWorkerSource(),
       bufferingStrategy: options?.bufferingStrategy ?? new TickBasedThrottling(),
       decoder: options?.decoder ?? new WorkerDecoder(),
-      audioTransformer: options?.audioTransformer ?? undefined
+      audioTransformer: options?.audioTransformer
     };
 
     this.source = this.options.source;
@@ -77,32 +77,24 @@ export default class PassThroughPlayer extends Player {
     this.media = media;
     this.unload();
 
-    const isAudioTransformerDefined = this.options.audioTransformer != undefined;
-
     const videoTrackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
-    const audioTrackGeneratorInput = new MediaStreamTrackGenerator({ kind: 'audio' });
-    
-    let audioTrackGeneratorOutput = null;
-   
+    const audioTrackGenerator = new MediaStreamTrackGenerator({ kind: 'audio' });
+  
     this.videoTrackGeneratorWriter = videoTrackGenerator.writable.getWriter();
-    this.audioTrackGeneratorWriter = audioTrackGeneratorInput.writable.getWriter();
+    this.audioTrackGeneratorWriter = audioTrackGenerator.writable.getWriter();
 
-    if (isAudioTransformerDefined) {
-      const trackProcessor = new MediaStreamTrackProcessor({ track: audioTrackGeneratorInput });
-
-      audioTrackGeneratorOutput = new MediaStreamTrackGenerator({ kind: 'audio' });
+    if (this.options.audioTransformer) {
+      const trackProcessor = new MediaStreamTrackProcessor({ track: audioTrackGenerator });
 
       const transformStream = new TransformStream(this.options.audioTransformer);
 
-      trackProcessor.readable.pipeThrough(transformStream).pipeTo(audioTrackGeneratorOutput?.writable);
+      trackProcessor.readable.pipeThrough(transformStream).pipeTo(audioTrackGenerator?.writable);
     }
 
     const mediaStream = new MediaStream();
     
     mediaStream.addTrack(videoTrackGenerator);
-
-    if (audioTrackGeneratorOutput) mediaStream.addTrack(audioTrackGeneratorOutput);
-    else mediaStream.addTrack(audioTrackGeneratorInput);
+    mediaStream.addTrack(audioTrackGenerator);
 
     this.media.srcObject = mediaStream;
   }
