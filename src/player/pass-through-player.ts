@@ -15,11 +15,12 @@ type PassThroughPlayerOptions = {
   source?: Source;
   bufferingStrategy?: BufferingStrategy;
   decoder?: Decoder;
+  audioTransformer?: Transformer<any, any>
 }
 
 export default class PassThroughPlayer extends Player {  
   private emitter: EventEmitter;
-  private options: Required<PassThroughPlayerOptions>;
+  private options: Required<Omit<PassThroughPlayerOptions, 'audioTransformer'>> & Pick<PassThroughPlayerOptions, 'audioTransformer'>;
 
   private source: Source; 
   private chunker: PacketChunker | null = null;
@@ -45,7 +46,8 @@ export default class PassThroughPlayer extends Player {
     this.options = {
       source: options?.source ?? new HTTPStreamingWorkerSource(),
       bufferingStrategy: options?.bufferingStrategy ?? new TickBasedThrottling(),
-      decoder: options?.decoder ?? new WorkerDecoder()
+      decoder: options?.decoder ?? new WorkerDecoder(),
+      audioTransformer: options?.audioTransformer
     };
 
     this.source = this.options.source;
@@ -77,12 +79,23 @@ export default class PassThroughPlayer extends Player {
 
     const videoTrackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
     const audioTrackGenerator = new MediaStreamTrackGenerator({ kind: 'audio' });
+  
     this.videoTrackGeneratorWriter = videoTrackGenerator.writable.getWriter();
     this.audioTrackGeneratorWriter = audioTrackGenerator.writable.getWriter();
-    
+
+    if (this.options.audioTransformer) {
+      const trackProcessor = new MediaStreamTrackProcessor({ track: audioTrackGenerator });
+
+      const transformStream = new TransformStream(this.options.audioTransformer);
+
+      trackProcessor.readable.pipeThrough(transformStream).pipeTo(audioTrackGenerator?.writable);
+    }
+
     const mediaStream = new MediaStream();
+    
     mediaStream.addTrack(videoTrackGenerator);
     mediaStream.addTrack(audioTrackGenerator);
+
     this.media.srcObject = mediaStream;
   }
 
