@@ -1,6 +1,6 @@
 {
   "name": "zlplayer",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "main": "dist/zlplayer.js",
   "types": "d.ts/index.d.ts",
   "files": [
